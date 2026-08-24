@@ -8,6 +8,72 @@ import {
   Upload, ClipboardPaste, Check
 } from "lucide-react";
 
+// --- 错误边界组件 ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error('React Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          background: '#0a0a0a', 
+          color: 'white', 
+          padding: '40px 20px', 
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <h1 style={{ fontSize: '24px', marginBottom: '20px', fontWeight: 'bold' }}>页面加载异常</h1>
+          <p style={{ color: '#ff6b6b', marginBottom: '20px', fontSize: '14px' }}>错误信息：</p>
+          <pre style={{ 
+            background: '#1a1a1a', 
+            padding: '20px', 
+            borderRadius: '8px', 
+            fontSize: '13px', 
+            overflow: 'auto',
+            maxWidth: '100%',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all'
+          }}>
+            {this.state.error?.toString()}
+          </pre>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ 
+              marginTop: '20px', 
+              padding: '12px 24px', 
+              background: 'white', 
+              color: 'black', 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            刷新页面
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // --- 数据 ---
 const PROFILE = {
   name: "谢曙浩",
@@ -41,11 +107,11 @@ const SKILLS = [
   { name: "Eevee", level: 80, icon: <Eye size={20} /> },
 ];
 
-// 使用测试图片（picsum.photos 提供免费随机图片）
-const TEST_IMAGE = "https://picsum.photos/400/300";
-const TEST_DETAIL_IMAGE = "https://picsum.photos/800/600";
+// 使用更稳定的占位图服务，替换 picsum.photos
+const TEST_IMAGE = "https://placehold.co/400x300/1a1a1a/666?text=3D+Work";
+const TEST_DETAIL_IMAGE = "https://placehold.co/800x600/1a1a1a/666?text=3D+Detail";
 
-// 所有作品数据（使用测试图片）
+// 所有作品数据
 const ALL_WORKS = [
   {
     id: 1,
@@ -280,9 +346,10 @@ const ADVANTAGES = [
 
 const CATEGORIES = ["全部", ...new Set(ALL_WORKS.map(work => work.category))];
 
-// --- 懒加载图片组件 ---
+// --- 懒加载图片组件（增加错误处理）---
 function LazyImage({ src, alt, className, ...props }) {
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
   const [inView, setInView] = useState(false);
   const imgRef = useRef(null);
 
@@ -310,17 +377,35 @@ function LazyImage({ src, alt, className, ...props }) {
     };
   }, []);
 
+  // 超时处理
+  useEffect(() => {
+    if (inView) {
+      const timeout = setTimeout(() => {
+        if (!loaded) {
+          setError(true);
+        }
+      }, 15000);
+      return () => clearTimeout(timeout);
+    }
+  }, [inView, loaded]);
+
   return (
     <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
-      {!loaded && (
+      {!loaded && !error && (
         <div className="absolute inset-0 bg-surface animate-pulse" />
       )}
-      {inView && (
+      {error && (
+        <div className="absolute inset-0 bg-surface flex items-center justify-center">
+          <span className="text-secondary text-xs">加载失败</span>
+        </div>
+      )}
+      {inView && !error && (
         <img
           src={src}
           alt={alt}
           loading="lazy"
           onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
           className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
           {...props}
         />
@@ -883,21 +968,23 @@ function AdminPage() {
   );
 }
 
-// --- 首页组件 ---
+// --- 首页组件（修复版，移除滚动动画）---
 function HomePage() {
-  const { scrollYProgress } = useScroll();
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    try {
+      const checkMobile = () => {
+        const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        setIsMobile(width < 768);
+      };
+      checkMobile();
+      window.addEventListener("resize", checkMobile);
+      return () => window.removeEventListener("resize", checkMobile);
+    } catch (e) {
+      console.error("Mobile detection error:", e);
+    }
   }, []);
 
   const handleProjectClick = (category) => {
@@ -906,7 +993,8 @@ function HomePage() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-6 bg-background/80 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none md:mix-blend-difference text-white">
+      {/* 导航栏 - 移除了 mix-blend-difference */}
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-6 bg-background/80 backdrop-blur-sm text-white">
         <div className="max-w-custom mx-auto flex justify-between items-center">
           <span className="text-base md:text-lg font-bold tracking-wider">
             {PROFILE.name.toUpperCase()}
@@ -927,230 +1015,197 @@ function HomePage() {
         </div>
       </nav>
 
+      {/* Hero 区域 - 使用普通 div 替代 motion.div，移除滚动动画 */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
         </div>
-        <motion.div
-          style={isMobile ? {} : { opacity: heroOpacity, scale: heroScale }}
-          className="relative z-10 text-center px-4 max-w-4xl"
-        >
-          <motion.p
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ delay: 0.2 }}
-            className="text-secondary tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-sm mb-4 md:mb-6 uppercase"
-          >
+        <div className="relative z-10 text-center px-4 max-w-4xl">
+          <p className="text-secondary tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-sm mb-4 md:mb-6 uppercase">
             {PROFILE.title}
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-4xl md:text-8xl font-bold tracking-tighter leading-none mb-6 md:mb-8"
-          >
+          </p>
+          <h1 className="text-4xl md:text-8xl font-bold tracking-tighter leading-none mb-6 md:mb-8">
             {PROFILE.name}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            transition={{ delay: 0.8 }}
-            className="text-base md:text-xl text-secondary font-light max-w-xl mx-auto"
-          >
+          </h1>
+          <p className="text-base md:text-xl text-secondary font-light max-w-xl mx-auto">
             {PROFILE.tagline}
-          </motion.p>
-        </motion.div>
-        <motion.div
-          animate={{ y: [0, 10, 0] }} 
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 text-secondary"
-        >
+          </p>
+        </div>
+        <div className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 text-secondary">
           <ArrowDown size={20} />
-        </motion.div>
+        </div>
       </section>
 
+      {/* 关于我 */}
       <section id="about" className="py-16 md:py-32 px-4 md:px-6">
         <div className="max-w-custom mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="lg:col-span-4">
-            <FadeIn>
-              <div className="aspect-[3/4] w-full bg-surface border border-border overflow-hidden relative group">
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop"
-                  alt="Profile"
-                  loading="lazy"
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                />
-              </div>
-            </FadeIn>
+            <div className="aspect-[3/4] w-full bg-surface border border-border overflow-hidden relative group">
+              <img
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop"
+                alt="Profile"
+                loading="lazy"
+                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+              />
+            </div>
           </div>
           <div className="lg:col-span-8 pt-4 md:pt-8">
-            <FadeIn delay={0.2}>
-              <SectionTitle subtitle="About Me">个人简介</SectionTitle>
-              <p className="text-base md:text-2xl leading-relaxed text-secondary font-light mb-8 md:mb-12">
-                {PROFILE.bio}
-              </p>
-              <div className="grid grid-cols-3 gap-4 md:gap-8 border-t border-border pt-6 md:pt-8 mb-8 md:mb-12">
-                {PROFILE.stats.map((stat, i) => (
-                  <div key={i}>
-                    <div className="text-2xl md:text-4xl font-light text-primary mb-1">{stat.value}</div>
-                    <div className="text-[10px] md:text-xs text-secondary tracking-widest uppercase">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 md:gap-4">
-                <a href={`mailto:${PROFILE.contact.email}`} className="px-6 md:px-8 py-2.5 md:py-3 bg-white text-black text-xs md:text-sm font-medium hover:bg-gray-200 transition-colors">
-                  发送邮件
-                </a>
-                <Link to="/portfolio" className="px-6 md:px-8 py-2.5 md:py-3 border border-border text-white text-xs md:text-sm font-medium hover:bg-white/5 transition-colors flex items-center gap-2">
-                  查看完整作品集 <ExternalLink size={12} />
-                </Link>
-              </div>
-            </FadeIn>
+            <SectionTitle subtitle="About Me">个人简介</SectionTitle>
+            <p className="text-base md:text-2xl leading-relaxed text-secondary font-light mb-8 md:mb-12">
+              {PROFILE.bio}
+            </p>
+            <div className="grid grid-cols-3 gap-4 md:gap-8 border-t border-border pt-6 md:pt-8 mb-8 md:mb-12">
+              {PROFILE.stats.map((stat, i) => (
+                <div key={i}>
+                  <div className="text-2xl md:text-4xl font-light text-primary mb-1">{stat.value}</div>
+                  <div className="text-[10px] md:text-xs text-secondary tracking-widest uppercase">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 md:gap-4">
+              <a href={`mailto:${PROFILE.contact.email}`} className="px-6 md:px-8 py-2.5 md:py-3 bg-white text-black text-xs md:text-sm font-medium hover:bg-gray-200 transition-colors">
+                发送邮件
+              </a>
+              <Link to="/portfolio" className="px-6 md:px-8 py-2.5 md:py-3 border border-border text-white text-xs md:text-sm font-medium hover:bg-white/5 transition-colors flex items-center gap-2">
+                查看完整作品集 <ExternalLink size={12} />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
+      {/* 精选项目 */}
       <section id="work" className="py-16 md:py-32 px-4 md:px-6 bg-surface/30">
         <div className="max-w-custom mx-auto">
-          <FadeIn>
-            <SectionTitle subtitle="Selected Works">精选项目</SectionTitle>
-          </FadeIn>
+          <SectionTitle subtitle="Selected Works">精选项目</SectionTitle>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {PROJECTS.map((project, index) => (
-              <FadeIn key={project.id} delay={index * 0.1}>
-                <div 
-                  className="group block cursor-pointer"
-                  onClick={() => handleProjectClick(project.category)}
-                >
-                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-4 md:mb-6 relative">
-                    <img
-                      src={project.cover}
-                      alt={project.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                      点击查看该分类作品 →
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-baseline mb-2 md:mb-3">
-                    <h3 className="text-lg md:text-2xl font-medium text-primary group-hover:text-white transition-colors">
-                      {project.title}
-                    </h3>
-                    <span className="text-[10px] md:text-xs text-secondary tracking-wider uppercase">
-                      {project.categoryLabel}
-                    </span>
-                  </div>
-
-                  <p className="text-secondary text-xs md:text-sm leading-relaxed mb-3 md:mb-4 max-w-lg">
-                    {project.desc}
-                  </p>
-
-                  <div className="flex flex-wrap gap-1.5 md:gap-2">
-                    {project.tags.map(tag => (
-                      <span key={tag} className="text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 md:py-1 border border-border text-secondary rounded-sm">
-                        {tag}
-                      </span>
-                    ))}
+              <div 
+                key={project.id}
+                className="group block cursor-pointer"
+                onClick={() => handleProjectClick(project.category)}
+              >
+                <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-4 md:mb-6 relative">
+                  <img
+                    src={project.cover}
+                    alt={project.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                  <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    点击查看该分类作品 →
                   </div>
                 </div>
-              </FadeIn>
+
+                <div className="flex justify-between items-baseline mb-2 md:mb-3">
+                  <h3 className="text-lg md:text-2xl font-medium text-primary group-hover:text-white transition-colors">
+                    {project.title}
+                  </h3>
+                  <span className="text-[10px] md:text-xs text-secondary tracking-wider uppercase">
+                    {project.categoryLabel}
+                  </span>
+                </div>
+
+                <p className="text-secondary text-xs md:text-sm leading-relaxed mb-3 md:mb-4 max-w-lg">
+                  {project.desc}
+                </p>
+
+                <div className="flex flex-wrap gap-1.5 md:gap-2">
+                  {project.tags.map(tag => (
+                    <span key={tag} className="text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 md:py-1 border border-border text-secondary rounded-sm">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* 专业优势与核心技能 */}
       <section id="skills" className="py-16 md:py-32 px-4 md:px-6">
         <div className="max-w-custom mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-24">
             <div>
-              <FadeIn>
-                <SectionTitle subtitle="Advantages">专业优势</SectionTitle>
-                <div className="space-y-8 md:space-y-12">
-                  {ADVANTAGES.map((adv, i) => (
-                    <div key={i} className="border-l border-border pl-4 md:pl-6 hover:border-white transition-colors duration-300">
-                      <h4 className="text-base md:text-lg font-medium text-primary mb-1.5 md:mb-2">{adv.title}</h4>
-                      <p className="text-secondary text-xs md:text-sm leading-relaxed">{adv.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </FadeIn>
+              <SectionTitle subtitle="Advantages">专业优势</SectionTitle>
+              <div className="space-y-8 md:space-y-12">
+                {ADVANTAGES.map((adv, i) => (
+                  <div key={i} className="border-l border-border pl-4 md:pl-6 hover:border-white transition-colors duration-300">
+                    <h4 className="text-base md:text-lg font-medium text-primary mb-1.5 md:mb-2">{adv.title}</h4>
+                    <p className="text-secondary text-xs md:text-sm leading-relaxed">{adv.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
-              <FadeIn delay={0.3}>
-                <SectionTitle subtitle="Tech Stack">核心技能</SectionTitle>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                  {SKILLS.map((skill, i) => (
-                    <div key={i} className="p-4 md:p-5 border border-border bg-surface/50 hover:bg-surface transition-colors group">
-                      <div className="flex justify-between items-center mb-2 md:mb-3">
-                        <div className="flex items-center gap-2 md:gap-3 text-primary group-hover:text-white">
-                          {skill.icon}
-                          <span className="text-sm md:text-base font-medium">{skill.name}</span>
-                        </div>
-                        <span className="text-[10px] md:text-xs text-secondary">{skill.level}%</span>
+              <SectionTitle subtitle="Tech Stack">核心技能</SectionTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                {SKILLS.map((skill, i) => (
+                  <div key={i} className="p-4 md:p-5 border border-border bg-surface/50 hover:bg-surface transition-colors group">
+                    <div className="flex justify-between items-center mb-2 md:mb-3">
+                      <div className="flex items-center gap-2 md:gap-3 text-primary group-hover:text-white">
+                        {skill.icon}
+                        <span className="text-sm md:text-base font-medium">{skill.name}</span>
                       </div>
-                      <div className="w-full h-[2px] bg-border overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${skill.level}%` }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-                          className="h-full bg-white"
-                        />
-                      </div>
+                      <span className="text-[10px] md:text-xs text-secondary">{skill.level}%</span>
                     </div>
-                  ))}
-                </div>
-              </FadeIn>
+                    <div className="w-full h-[2px] bg-border overflow-hidden">
+                      <div
+                        className="h-full bg-white transition-all duration-1000"
+                        style={{ width: `${skill.level}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* 联系 */}
       <section id="contact" className="min-h-screen flex flex-col justify-center px-4 md:px-6 border-t border-border relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap pointer-events-none select-none opacity-[0.03]">
           <span className="text-[25vw] md:text-[20vw] font-bold leading-none">CONTACT</span>
         </div>
         <div className="max-w-custom mx-auto w-full relative z-10">
-          <FadeIn>
-            <p className="text-secondary tracking-[0.3em] text-xs md:text-sm mb-6 md:mb-8 uppercase">Get In Touch</p>
-            <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-10 md:mb-16 break-words">
-              期待与您<br />共创视觉佳作
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 border-t border-border pt-8 md:pt-12">
-              <div>
-                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Email</h5>
-                <a href={`mailto:${PROFILE.contact.email}`} className="text-base md:text-2xl hover:text-secondary transition-colors break-all">
-                  {PROFILE.contact.email}
-                </a>
-              </div>
-              <div>
-                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Phone</h5>
-                <a href={`tel:${PROFILE.contact.phone}`} className="text-base md:text-2xl hover:text-secondary transition-colors">
-                  {PROFILE.contact.phone}
-                </a>
-              </div>
-              <div>
-                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Location</h5>
-                <p className="text-base md:text-2xl">{PROFILE.contact.city}</p>
-              </div>
+          <p className="text-secondary tracking-[0.3em] text-xs md:text-sm mb-6 md:mb-8 uppercase">Get In Touch</p>
+          <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-10 md:mb-16 break-words">
+            期待与您<br />共创视觉佳作
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 border-t border-border pt-8 md:pt-12">
+            <div>
+              <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Email</h5>
+              <a href={`mailto:${PROFILE.contact.email}`} className="text-base md:text-2xl hover:text-secondary transition-colors break-all">
+                {PROFILE.contact.email}
+              </a>
             </div>
-            <div className="mt-20 md:mt-32 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 text-secondary text-[10px] md:text-xs">
-              <p>© {new Date().getFullYear()} {PROFILE.name}. All Rights Reserved.</p>
-              <p>Designed for 3D Artistry</p>
+            <div>
+              <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Phone</h5>
+              <a href={`tel:${PROFILE.contact.phone}`} className="text-base md:text-2xl hover:text-secondary transition-colors">
+                {PROFILE.contact.phone}
+              </a>
             </div>
-          </FadeIn>
+            <div>
+              <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Location</h5>
+              <p className="text-base md:text-2xl">{PROFILE.contact.city}</p>
+            </div>
+          </div>
+          <div className="mt-20 md:mt-32 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 text-secondary text-[10px] md:text-xs">
+            <p>© {new Date().getFullYear()} {PROFILE.name}. All Rights Reserved.</p>
+            <p>Designed for 3D Artistry</p>
+          </div>
         </div>
       </section>
     </>
   );
 }
 
-// --- 二级页面：完整作品集 ---
+// --- 完整作品集页面 ---
 function PortfolioPage() {
   const [activeCategory, setActiveCategory] = useState("全部");
   const [searchTerm, setSearchTerm] = useState("");
@@ -1274,11 +1329,8 @@ function PortfolioPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredWorks.map((work, index) => (
-                <motion.div
+                <div
                   key={work.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
                   className="group cursor-pointer"
                   onClick={() => navigate(`/work/${work.slug}`)}
                 >
@@ -1300,7 +1352,7 @@ function PortfolioPage() {
                     {work.title}
                   </h3>
                   <p className="text-xs md:text-sm text-secondary">{work.desc}</p>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
@@ -1310,7 +1362,7 @@ function PortfolioPage() {
   );
 }
 
-// --- 三级页面：产品详情页 ---
+// --- 作品详情页 ---
 function WorkDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -1321,7 +1373,7 @@ function WorkDetailPage() {
     if (work) {
       setSelectedImage(work.detail.images[0]);
     }
-  }, [slug]);
+  }, [slug, work]);
 
   if (!work) {
     return (
@@ -1457,17 +1509,21 @@ function WorkDetailPage() {
 }
 
 // --- 主应用 ---
-export default function App() {
+function App() {
   return (
-    <div className="min-h-screen bg-background selection:bg-white/20">
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/work/:slug" element={<WorkDetailPage />} />
-        <Route path="/portfolio/:slug" element={<WorkDetailPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-      </Routes>
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-background selection:bg-white/20">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/work/:slug" element={<WorkDetailPage />} />
+          <Route path="/portfolio/:slug" element={<WorkDetailPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
+      </div>
+    </ErrorBoundary>
   );
 }
+
+export default App;
