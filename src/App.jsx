@@ -1,10 +1,11 @@
-import React from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import React, { useState } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
-  Mail, Phone, MapPin, ExternalLink,
+  Mail, Phone, MapPin, ExternalLink, X, ArrowLeft,
   Box, Layers, Cpu, Eye, ArrowDown
 } from "lucide-react";
 
+// --- 数据 ---
 const PROFILE = {
   name: "谢曙浩",
   title: "3D Artist / 3D建模师",
@@ -12,7 +13,7 @@ const PROFILE = {
   bio: "1.5年经验的独立3D艺术家，深耕3D建模与渲染领域。精通Cinema 4D与Blender双软件工作流，熟练使用Octane/Redshift/Cycles等主流渲染器。聚焦广告设计方向，擅长产品视觉化与场景构建，追求照片级渲染品质。",
   contact: {
     phone: "193 8854 5612",
-  email: "3569491401@qq.com",
+    email: "3569491401@qq.com",
     city: "China",
     portfolio: "#"
   },
@@ -39,7 +40,12 @@ const PROJECTS = [
     category: "C4D + Octane",
     desc: "为美妆品牌进行产品可视化建模与渲染。针对唇釉、精华液等化妆品进行精细建模与材质还原，重点攻克液体质感、玻璃瓶身反射与细腻材质细节，通过精准的光影控制，产出具有高级商业广告质感的超写实视觉图像。",
     tags: ["硬表面建模", "材质节点搭建", "光影控制", "产品可视化"],
-    image: "/images/1.png"
+    cover: "/images/1.png",
+    images: [
+      "/images/1.png",
+      "/images/2.png",
+      "/images/3.png"
+    ]
   },
   {
     id: 2,
@@ -47,7 +53,12 @@ const PROJECTS = [
     category: "Blender + Cycles",
     desc: "为3C数码品牌进行产品可视化建模与渲染。针对手机、耳机、智能手表等数码产品进行高精度建模与材质还原，重点攻克金属拉丝质感、磨砂表面、屏幕玻璃反射与精密结构细节，结合Cycles引擎进行光影调试，产出具有科技感与商业广告品质的超写实视觉图像。",
     tags: ["硬表面建模", "金属材质", "产品渲染", "商业可视化"],
-    image: "/images/游戏手柄_01_后期.png"
+    cover: "/images/4.png",
+    images: [
+      "/images/4.png",
+      "/images/5.png",
+      "/images/6.png"
+    ]
   }
 ];
 
@@ -58,10 +69,17 @@ const ADVANTAGES = [
   { title: "极致渲染审美", desc: "熟悉光影、材质与构图表达，追求照片级商业渲染品质" },
 ];
 
+// --- 通用组件 ---
 const SectionTitle = ({ children, subtitle }) => (
   <div className="mb-16 md:mb-24">
-    {subtitle && <span className="text-xs tracking-[0.3em] text-secondary uppercase mb-3 block">{subtitle}</span>}
-    <h2 className="text-3xl md:text-5xl font-light tracking-tight text-primary">{children}</h2>
+    {subtitle && (
+      <span className="text-xs tracking-[0.3em] text-secondary uppercase mb-3 block">
+        {subtitle}
+      </span>
+    )}
+    <h2 className="text-3xl md:text-5xl font-light tracking-tight text-primary">
+      {children}
+    </h2>
     <div className="w-20 h-[1px] bg-border mt-6"></div>
   </div>
 );
@@ -77,7 +95,97 @@ const FadeIn = ({ children, delay = 0 }) => (
   </motion.div>
 );
 
+// --- 项目详情页组件 ---
+const ProjectDetail = ({ project, onClose }) => {
+  const [selectedImage, setSelectedImage] = useState(project.images[0]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] bg-background overflow-y-auto"
+    >
+      {/* 顶部导航 */}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4">
+        <div className="max-w-custom mx-auto flex justify-between items-center">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm">返回作品集</span>
+          </button>
+          <span className="text-sm text-secondary">{project.category}</span>
+        </div>
+      </div>
+
+      {/* 项目标题 */}
+      <div className="px-6 pt-16 pb-8">
+        <div className="max-w-custom mx-auto">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
+            {project.title}
+          </h1>
+          <p className="text-secondary text-lg leading-relaxed max-w-3xl">
+            {project.desc}
+          </p>
+          <div className="flex flex-wrap gap-2 mt-6">
+            {project.tags.map(tag => (
+              <span key={tag} className="text-xs px-3 py-1 border border-border text-secondary rounded-sm">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 主图展示 */}
+      <div className="px-6 pb-8">
+        <div className="max-w-custom mx-auto">
+          <div className="aspect-[16/9] bg-surface border border-border overflow-hidden">
+            <img
+              src={selectedImage}
+              alt={project.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 缩略图列表 */}
+      <div className="px-6 pb-24">
+        <div className="max-w-custom mx-auto">
+          <h3 className="text-sm text-secondary uppercase tracking-widest mb-4">
+            全部作品
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {project.images.map((img, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedImage(img)}
+                className={`aspect-square overflow-hidden border transition-all duration-300 ${
+                  selectedImage === img
+                    ? "border-white"
+                    : "border-border hover:border-secondary"
+                }`}
+              >
+                <img
+                  src={img}
+                  alt={`${project.title} - ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// --- 主应用 ---
 export default function App() {
+  const [selectedProject, setSelectedProject] = useState(null);
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
@@ -85,10 +193,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background selection:bg-white/20">
 
-      {/* 导航 */}
+      {/* 顶部导航 */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-6 mix-blend-difference text-white">
         <div className="max-w-custom mx-auto flex justify-between items-center">
-          <span className="text-lg font-bold tracking-wider">{PROFILE.name.toUpperCase()}</span>
+          <span className="text-lg font-bold tracking-wider">
+            {PROFILE.name.toUpperCase()}
+          </span>
           <div className="hidden md:flex gap-8 text-sm tracking-wide text-secondary">
             <a href="#about" className="hover:text-white transition-colors">关于</a>
             <a href="#work" className="hover:text-white transition-colors">作品</a>
@@ -98,7 +208,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* 1. Hero */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
@@ -135,7 +245,7 @@ export default function App() {
         </motion.div>
       </section>
 
-      {/* About */}
+      {/* 2. About */}
       <section id="about" className="py-32 px-6">
         <div className="max-w-custom mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           <div className="lg:col-span-4">
@@ -176,31 +286,50 @@ export default function App() {
         </div>
       </section>
 
-      {/* Projects */}
+      {/* 3. Selected Works */}
       <section id="work" className="py-32 px-6 bg-surface/30">
         <div className="max-w-custom mx-auto">
           <FadeIn>
             <SectionTitle subtitle="Selected Works">精选项目</SectionTitle>
           </FadeIn>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {PROJECTS.map((project, index) => (
               <FadeIn key={project.id} delay={index * 0.2}>
-                <div className="group cursor-pointer">
+                <div
+                  className="group cursor-pointer"
+                  onClick={() => setSelectedProject(project)}
+                >
                   <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-6 relative">
                     <img
-                      src={project.image}
+                      src={project.cover}
                       alt={project.title}
                       className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                     />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-4 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                      点击查看全部作品 →
+                    </div>
                   </div>
+
                   <div className="flex justify-between items-baseline mb-3">
-                    <h3 className="text-2xl font-medium text-primary">{project.title}</h3>
-                    <span className="text-xs text-secondary tracking-wider uppercase">{project.category}</span>
+                    <h3 className="text-2xl font-medium text-primary group-hover:text-white transition-colors">
+                      {project.title}
+                    </h3>
+                    <span className="text-xs text-secondary tracking-wider uppercase">
+                      {project.category}
+                    </span>
                   </div>
-                  <p className="text-secondary text-sm leading-relaxed mb-4 max-w-lg">{project.desc}</p>
+
+                  <p className="text-secondary text-sm leading-relaxed mb-4 max-w-lg">
+                    {project.desc}
+                  </p>
+
                   <div className="flex flex-wrap gap-2">
                     {project.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-1 border border-border text-secondary rounded-sm">{tag}</span>
+                      <span key={tag} className="text-[10px] px-2 py-1 border border-border text-secondary rounded-sm">
+                        {tag}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -210,7 +339,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* Skills & Advantages */}
+      {/* 4. Advantages & Skills */}
       <section id="skills" className="py-32 px-6">
         <div className="max-w-custom mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-24">
@@ -245,7 +374,7 @@ export default function App() {
                           initial={{ width: 0 }}
                           whileInView={{ width: `${skill.level}%` }}
                           viewport={{ once: true }}
-                          transition={{ duration: 1, delay: 0.5 + (i * 0.1) }}
+                          transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
                           className="h-full bg-white"
                         />
                       </div>
@@ -258,7 +387,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* Contact */}
+      {/* 5. Footer / Contact */}
       <section id="contact" className="min-h-screen flex flex-col justify-center px-6 border-t border-border relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap pointer-events-none select-none opacity-[0.03]">
           <span className="text-[20vw] font-bold leading-none">CONTACT</span>
@@ -294,6 +423,16 @@ export default function App() {
           </FadeIn>
         </div>
       </section>
+
+      {/* 项目详情弹窗 */}
+      <AnimatePresence>
+        {selectedProject && (
+          <ProjectDetail
+            project={selectedProject}
+            onClose={() => setSelectedProject(null)}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );
