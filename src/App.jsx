@@ -13,11 +13,7 @@ const PROFILE = {
   bio: "1.5年经验的独立3D艺术家，深耕3D建模与渲染领域。精通Cinema 4D与Blender双软件工作流，熟练使用Octane/Redshift/Cycles等主流渲染器。聚焦广告设计方向，擅长产品视觉化与场景构建，追求照片级渲染品质。",
   contact: {
     phone: "193 8854 5612",
-<<<<<<< HEAD
     email: "3569491401@qq.com",
-=======
-  email: "3569491401@qq.com",
->>>>>>> c8f576137087349dec34f4974422990676edafaa
     city: "China",
     portfolio: "#"
   },
@@ -44,16 +40,12 @@ const PROJECTS = [
     category: "C4D + Octane",
     desc: "为美妆品牌进行产品可视化建模与渲染。针对唇釉、精华液等化妆品进行精细建模与材质还原，重点攻克液体质感、玻璃瓶身反射与细腻材质细节，通过精准的光影控制，产出具有高级商业广告质感的超写实视觉图像。",
     tags: ["硬表面建模", "材质节点搭建", "光影控制", "产品可视化"],
-<<<<<<< HEAD
     cover: "/images/1.png",
     images: [
       "/images/1.png",
       "/images/2.png",
       "/images/3.png"
     ]
-=======
-    image: "/images/1.png"
->>>>>>> c8f576137087349dec34f4974422990676edafaa
   },
   {
     id: 2,
@@ -61,16 +53,12 @@ const PROJECTS = [
     category: "Blender + Cycles",
     desc: "为3C数码品牌进行产品可视化建模与渲染。针对手机、耳机、智能手表等数码产品进行高精度建模与材质还原，重点攻克金属拉丝质感、磨砂表面、屏幕玻璃反射与精密结构细节，结合Cycles引擎进行光影调试，产出具有科技感与商业广告品质的超写实视觉图像。",
     tags: ["硬表面建模", "金属材质", "产品渲染", "商业可视化"],
-<<<<<<< HEAD
     cover: "/images/4.png",
     images: [
       "/images/4.png",
       "/images/5.png",
       "/images/6.png"
     ]
-=======
-    image: "/images/游戏手柄_01_后期.png"
->>>>>>> c8f576137087349dec34f4974422990676edafaa
   }
 ];
 
