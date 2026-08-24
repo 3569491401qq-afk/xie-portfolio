@@ -261,27 +261,76 @@ const ADVANTAGES = [
 // 动态生成分类（只显示有作品的分类）
 const CATEGORIES = ["全部", ...new Set(ALL_WORKS.map(work => work.category))];
 
+// --- 懒加载图片组件 ---
+function LazyImage({ src, alt, className, ...props }) {
+  const [loaded, setLoaded] = useState(false);
+  const [inView, setInView] = useState(false);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setInView(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "50px" }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
+      {!loaded && (
+        <div className="absolute inset-0 bg-surface animate-pulse" />
+      )}
+      {inView && (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+          {...props}
+        />
+      )}
+    </div>
+  );
+}
+
 // --- 通用组件 ---
 const SectionTitle = ({ children, subtitle }) => (
-  <div className="mb-16 md:mb-24">
+  <div className="mb-10 md:mb-24">
     {subtitle && (
-      <span className="text-xs tracking-[0.3em] text-secondary uppercase mb-3 block">
+      <span className="text-[10px] md:text-xs tracking-[0.3em] text-secondary uppercase mb-2 md:mb-3 block">
         {subtitle}
       </span>
     )}
-    <h2 className="text-3xl md:text-5xl font-light tracking-tight text-primary">
+    <h2 className="text-2xl md:text-5xl font-light tracking-tight text-primary">
       {children}
     </h2>
-    <div className="w-20 h-[1px] bg-border mt-6"></div>
+    <div className="w-16 md:w-20 h-[1px] bg-border mt-4 md:mt-6"></div>
   </div>
 );
 
 const FadeIn = ({ children, delay = 0 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 40 }}
+    initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-100px" }}
-    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay }}
+    viewport={{ once: true, margin: "-50px" }}
+    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay }}
   >
     {children}
   </motion.div>
@@ -305,45 +354,45 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 md:px-6">
       <div className="w-full max-w-md">
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-white/5 border border-border rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock size={28} className="text-secondary" />
+        <div className="text-center mb-8 md:mb-12">
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-white/5 border border-border rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
+            <Lock size={24} md:size={28} className="text-secondary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tighter mb-2">作者中心</h1>
-          <p className="text-secondary text-sm">请输入账号和密码登录</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tighter mb-2">作者中心</h1>
+          <p className="text-secondary text-xs md:text-sm">请输入账号和密码登录</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-4 md:space-y-6">
           <div>
-            <label className="block text-sm text-secondary mb-2">账号</label>
+            <label className="block text-xs md:text-sm text-secondary mb-2">账号</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="请输入账号"
-              className="w-full px-4 py-3 bg-surface border border-border text-white placeholder-secondary focus:border-white focus:outline-none transition-colors"
+              className="w-full px-4 py-2.5 md:py-3 bg-surface border border-border text-white placeholder-secondary focus:border-white focus:outline-none transition-colors text-sm"
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-secondary mb-2">密码</label>
+            <label className="block text-xs md:text-sm text-secondary mb-2">密码</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="请输入密码"
-              className="w-full px-4 py-3 bg-surface border border-border text-white placeholder-secondary focus:border-white focus:outline-none transition-colors"
+              className="w-full px-4 py-2.5 md:py-3 bg-surface border border-border text-white placeholder-secondary focus:border-white focus:outline-none transition-colors text-sm"
               required
             />
           </div>
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-red-500 text-xs md:text-sm">{error}</p>
           )}
           <button
             type="submit"
-            className="w-full px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="w-full px-6 py-2.5 md:py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
           >
             登录
           </button>
@@ -351,9 +400,9 @@ function LoginPage() {
 
         <button
           onClick={() => navigate("/")}
-          className="w-full mt-4 px-6 py-3 border border-border text-secondary text-sm hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+          className="w-full mt-3 md:mt-4 px-6 py-2.5 md:py-3 border border-border text-secondary text-sm hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} md:size={16} />
           返回首页
         </button>
       </div>
@@ -384,7 +433,6 @@ function AdminPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  // 检查登录状态
   useEffect(() => {
     const isLoggedIn = sessionStorage.getItem("isAuthorLoggedIn");
     if (!isLoggedIn) {
@@ -415,7 +463,6 @@ function AdminPage() {
     alert("保存成功！");
   };
 
-  // 处理粘贴图片
   const handlePaste = (e) => {
     const items = e.clipboardData?.items;
     if (items) {
@@ -426,7 +473,6 @@ function AdminPage() {
           reader.onload = (event) => {
             const imageUrl = event.target.result;
             setPastedImages(prev => [...prev, imageUrl]);
-            // 自动设置第一张为封面
             if (pastedImages.length === 0) {
               setNewWork(prev => ({ ...prev, image: imageUrl }));
             }
@@ -437,7 +483,6 @@ function AdminPage() {
     }
   };
 
-  // 处理文件上传
   const handleFileUpload = (e) => {
     const files = e.target.files;
     if (files) {
@@ -488,66 +533,62 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 顶部导航 */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 md:px-6 py-3 md:py-4">
         <div className="max-w-custom mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <button
               onClick={() => navigate("/")}
               className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
             >
-              <ArrowLeft size={18} />
-              <span className="text-sm">返回首页</span>
+              <ArrowLeft size={16} md:size={18} />
+              <span className="text-xs md:text-sm">返回首页</span>
             </button>
-            <span className="text-sm text-secondary">|</span>
-            <span className="text-sm font-medium">作者中心</span>
+            <span className="text-xs md:text-sm text-secondary">|</span>
+            <span className="text-xs md:text-sm font-medium">作者中心</span>
           </div>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
           >
-            <LogOut size={18} />
-            <span className="text-sm">退出登录</span>
+            <LogOut size={16} md:size={18} />
+            <span className="text-xs md:text-sm">退出登录</span>
           </button>
         </div>
       </div>
 
-      {/* 主要内容 */}
-      <div className="px-6 py-12">
+      <div className="px-4 md:px-6 py-8 md:py-12">
         <div className="max-w-custom mx-auto">
-          <div className="flex justify-between items-center mb-12">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 md:mb-12">
             <div>
-              <h1 className="text-4xl font-bold tracking-tighter mb-2">作品管理</h1>
-              <p className="text-secondary">共 {works.length} 个作品</p>
+              <h1 className="text-2xl md:text-4xl font-bold tracking-tighter mb-1 md:mb-2">作品管理</h1>
+              <p className="text-secondary text-sm">共 {works.length} 个作品</p>
             </div>
             <button
               onClick={() => setShowAddForm(true)}
-              className="px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+              className="px-5 md:px-6 py-2.5 md:py-3 bg-white text-black text-xs md:text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
             >
-              <Plus size={16} />
+              <Plus size={14} md:size={16} />
               添加作品
             </button>
           </div>
 
-          {/* 添加作品弹窗 */}
           {showAddForm && (
-            <div className="fixed inset-0 bg-black/50 z-20 flex items-center justify-center p-6">
-              <div className="bg-background border border-border p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">添加新作品</h2>
+            <div className="fixed inset-0 bg-black/50 z-20 flex items-center justify-center p-4 md:p-6">
+              <div className="bg-background border border-border p-6 md:p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4 md:mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold">添加新作品</h2>
                   <button
                     onClick={() => setShowAddForm(false)}
                     className="text-secondary hover:text-white"
                   >
-                    <X size={24} />
+                    <X size={20} md:size={24} />
                   </button>
                 </div>
 
-                {/* 图片粘贴区域 */}
-                <div className="mb-6">
-                  <label className="block text-sm text-secondary mb-2">作品图片（可直接粘贴或上传）</label>
+                <div className="mb-4 md:mb-6">
+                  <label className="block text-xs md:text-sm text-secondary mb-2">作品图片（可直接粘贴或上传）</label>
                   <div
-                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-white transition-colors"
+                    className="border-2 border-dashed border-border rounded-lg p-4 md:p-6 text-center cursor-pointer hover:border-white transition-colors"
                     onPaste={handlePaste}
                     onClick={() => fileInputRef.current?.click()}
                     tabIndex={0}
@@ -560,23 +601,22 @@ function AdminPage() {
                       onChange={handleFileUpload}
                       className="hidden"
                     />
-                    <ClipboardPaste size={32} className="mx-auto mb-3 text-secondary" />
-                    <p className="text-secondary text-sm mb-2">
+                    <ClipboardPaste size={24} md:size={32} className="mx-auto mb-2 md:mb-3 text-secondary" />
+                    <p className="text-secondary text-xs md:text-sm mb-1 md:mb-2">
                       点击上传图片，或直接 Ctrl+V 粘贴图片
                     </p>
-                    <p className="text-xs text-secondary/60">
+                    <p className="text-[10px] md:text-xs text-secondary/60">
                       支持多张图片，第一张将作为封面
                     </p>
                   </div>
 
-                  {/* 已粘贴的图片预览 */}
                   {pastedImages.length > 0 && (
-                    <div className="grid grid-cols-4 gap-3 mt-4">
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mt-3 md:mt-4">
                       {pastedImages.map((img, index) => (
                         <div key={index} className="relative aspect-square border border-border overflow-hidden group">
                           <img src={img} alt={`图片${index + 1}`} className="w-full h-full object-cover" />
                           {index === 0 && (
-                            <span className="absolute top-1 left-1 bg-white text-black text-[10px] px-1.5 py-0.5 rounded-sm">
+                            <span className="absolute top-1 left-1 bg-white text-black text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded-sm">
                               封面
                             </span>
                           )}
@@ -585,9 +625,9 @@ function AdminPage() {
                               e.stopPropagation();
                               setPastedImages(pastedImages.filter((_, i) => i !== index));
                             }}
-                            className="absolute top-1 right-1 bg-black/60 p-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 bg-black/60 p-0.5 md:p-1 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <X size={12} className="text-white" />
+                            <X size={10} md:size={12} className="text-white" />
                           </button>
                         </div>
                       ))}
@@ -595,22 +635,22 @@ function AdminPage() {
                   )}
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="block text-sm text-secondary mb-2">作品标题</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">作品标题</label>
                     <input
                       type="text"
                       value={newWork.title}
                       onChange={(e) => setNewWork({...newWork, title: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">分类</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">分类</label>
                     <select
                       value={newWork.category}
                       onChange={(e) => setNewWork({...newWork, category: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     >
                       {CATEGORIES.filter(cat => cat !== "全部").map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -618,55 +658,55 @@ function AdminPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">简短描述</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">简短描述</label>
                     <input
                       type="text"
                       value={newWork.desc}
                       onChange={(e) => setNewWork({...newWork, desc: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">Slug（URL标识）</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">Slug（URL标识）</label>
                     <input
                       type="text"
                       value={newWork.slug}
                       onChange={(e) => setNewWork({...newWork, slug: e.target.value})}
                       placeholder="例如：new-work"
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">详细标题</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">详细标题</label>
                     <input
                       type="text"
                       value={newWork.detail.title}
                       onChange={(e) => setNewWork({...newWork, detail: {...newWork.detail, title: e.target.value}})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">详细描述</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">详细描述</label>
                     <textarea
                       value={newWork.detail.description}
                       onChange={(e) => setNewWork({...newWork, detail: {...newWork.detail, description: e.target.value}})}
-                      rows={4}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      rows={3}
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">标签（用逗号分隔）</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">标签（用逗号分隔）</label>
                     <input
                       type="text"
                       value={newWork.detail.tags.join(", ")}
                       onChange={(e) => setNewWork({...newWork, detail: {...newWork.detail, tags: e.target.value.split(",").map(tag => tag.trim())}})}
                       placeholder="标签1, 标签2, 标签3"
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <button
                     onClick={handleAddWork}
-                    className="w-full px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
+                    className="w-full px-6 py-2.5 md:py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
                   >
                     确认添加
                   </button>
@@ -675,35 +715,34 @@ function AdminPage() {
             </div>
           )}
 
-          {/* 编辑作品弹窗 */}
           {editingWork && (
-            <div className="fixed inset-0 bg-black/50 z-20 flex items-center justify-center p-6">
-              <div className="bg-background border border-border p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">编辑作品</h2>
+            <div className="fixed inset-0 bg-black/50 z-20 flex items-center justify-center p-4 md:p-6">
+              <div className="bg-background border border-border p-6 md:p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4 md:mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold">编辑作品</h2>
                   <button
                     onClick={() => setEditingWork(null)}
                     className="text-secondary hover:text-white"
                   >
-                    <X size={24} />
+                    <X size={20} md:size={24} />
                   </button>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   <div>
-                    <label className="block text-sm text-secondary mb-2">作品标题</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">作品标题</label>
                     <input
                       type="text"
                       value={editingWork.title}
                       onChange={(e) => setEditingWork({...editingWork, title: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">分类</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">分类</label>
                     <select
                       value={editingWork.category}
                       onChange={(e) => setEditingWork({...editingWork, category: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     >
                       {CATEGORIES.filter(cat => cat !== "全部").map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -711,64 +750,64 @@ function AdminPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">封面图片URL</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">封面图片URL</label>
                     <input
                       type="text"
                       value={editingWork.image}
                       onChange={(e) => setEditingWork({...editingWork, image: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">简短描述</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">简短描述</label>
                     <input
                       type="text"
                       value={editingWork.desc}
                       onChange={(e) => setEditingWork({...editingWork, desc: e.target.value})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">详细标题</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">详细标题</label>
                     <input
                       type="text"
                       value={editingWork.detail.title}
                       onChange={(e) => setEditingWork({...editingWork, detail: {...editingWork.detail, title: e.target.value}})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">详细描述</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">详细描述</label>
                     <textarea
                       value={editingWork.detail.description}
                       onChange={(e) => setEditingWork({...editingWork, detail: {...editingWork.detail, description: e.target.value}})}
-                      rows={4}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      rows={3}
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">标签（用逗号分隔）</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">标签（用逗号分隔）</label>
                     <input
                       type="text"
                       value={editingWork.detail.tags.join(", ")}
                       onChange={(e) => setEditingWork({...editingWork, detail: {...editingWork.detail, tags: e.target.value.split(",").map(tag => tag.trim())}})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-secondary mb-2">详细图片URL（用逗号分隔）</label>
+                    <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">详细图片URL（用逗号分隔）</label>
                     <input
                       type="text"
                       value={editingWork.detail.images.join(", ")}
                       onChange={(e) => setEditingWork({...editingWork, detail: {...editingWork.detail, images: e.target.value.split(",").map(img => img.trim())}})}
-                      className="w-full px-4 py-2 bg-surface border border-border text-white focus:border-white focus:outline-none"
+                      className="w-full px-3 md:px-4 py-2 bg-surface border border-border text-white text-sm focus:border-white focus:outline-none"
                     />
                   </div>
                   <button
                     onClick={handleSaveEdit}
-                    className="w-full px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-6 py-2.5 md:py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Save size={16} />
+                    <Save size={14} md:size={16} />
                     保存修改
                   </button>
                 </div>
@@ -776,47 +815,46 @@ function AdminPage() {
             </div>
           )}
 
-          {/* 作品网格列表 - 仿照二级菜单布局 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {works.map((work, index) => (
               <motion.div
                 key={work.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.03 }}
                 className="group relative"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-4 relative">
+                <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-3 md:mb-4 relative">
                   <img
                     src={work.image}
                     alt={work.title}
+                    loading="lazy"
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                   />
-                  <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 text-xs text-white">
+                  <div className="absolute top-2 md:top-3 left-2 md:left-3 bg-black/60 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs text-white">
                     {work.category}
                   </div>
-                  {/* 操作按钮 */}
-                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 md:top-3 right-2 md:right-3 flex gap-1.5 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => handleEditWork(work)}
-                      className="p-2 bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/80 transition-colors"
+                      className="p-1.5 md:p-2 bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/80 transition-colors"
                       title="编辑"
                     >
-                      <Edit3 size={14} />
+                      <Edit3 size={12} md:size={14} />
                     </button>
                     <button
                       onClick={() => handleDeleteWork(work.id)}
-                      className="p-2 bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-red-600/80 transition-colors"
+                      className="p-1.5 md:p-2 bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-red-600/80 transition-colors"
                       title="删除"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={12} md:size={14} />
                     </button>
                   </div>
                 </div>
-                <h3 className="text-lg font-medium text-primary group-hover:text-white transition-colors mb-1">
+                <h3 className="text-base md:text-lg font-medium text-primary group-hover:text-white transition-colors mb-1">
                   {work.title}
                 </h3>
-                <p className="text-sm text-secondary">{work.desc}</p>
+                <p className="text-xs md:text-sm text-secondary">{work.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -826,24 +864,33 @@ function AdminPage() {
   );
 }
 
-// --- 首页组件 ---
+// --- 首页组件（移动端优化） ---
 function HomePage() {
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(false);
 
-  // 跳转到作品集并筛选对应分类
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const handleProjectClick = (category) => {
     navigate(`/portfolio?category=${encodeURIComponent(category)}`);
   };
 
   return (
     <>
-      {/* 顶部导航 */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-6 mix-blend-difference text-white">
+      {/* 顶部导航 - 移动端优化 */}
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-6 bg-background/80 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none md:mix-blend-difference text-white">
         <div className="max-w-custom mx-auto flex justify-between items-center">
-          <span className="text-lg font-bold tracking-wider">
+          <span className="text-base md:text-lg font-bold tracking-wider">
             {PROFILE.name.toUpperCase()}
           </span>
           <div className="hidden md:flex gap-8 text-sm tracking-wide text-secondary items-center">
@@ -851,90 +898,97 @@ function HomePage() {
             <a href="#work" className="hover:text-white transition-colors">作品</a>
             <a href="#skills" className="hover:text-white transition-colors">优势</a>
             <a href="#contact" className="hover:text-white transition-colors">联系</a>
-            {/* 作者中心入口 */}
-            <Link
-              to="/login"
-              className="flex items-center gap-1 hover:text-white transition-colors"
-              title="作者中心"
-            >
+            <Link to="/login" className="flex items-center gap-1 hover:text-white transition-colors" title="作者中心">
               <Settings size={16} />
               <span className="text-xs">作者中心</span>
             </Link>
           </div>
+          {/* 移动端作者中心入口 */}
+          <Link to="/login" className="md:hidden text-white" title="作者中心">
+            <Settings size={20} />
+          </Link>
         </div>
       </nav>
 
-      {/* 1. Hero */}
+      {/* 1. Hero - 移动端优化 */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
         </div>
         <motion.div
-          style={{ opacity: heroOpacity, scale: heroScale }}
+          style={isMobile ? {} : { opacity: heroOpacity, scale: heroScale }}
           className="relative z-10 text-center px-4 max-w-4xl"
         >
           <motion.p
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="text-secondary tracking-[0.4em] text-xs md:text-sm mb-6 uppercase"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.2 }}
+            className="text-secondary tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-sm mb-4 md:mb-6 uppercase"
           >
             {PROFILE.title}
           </motion.p>
           <motion.h1
-            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-5xl md:text-8xl font-bold tracking-tighter leading-none mb-8"
+            initial={{ opacity: 0, y: 30 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-4xl md:text-8xl font-bold tracking-tighter leading-none mb-6 md:mb-8"
           >
             {PROFILE.name}
           </motion.h1>
           <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
-            className="text-lg md:text-xl text-secondary font-light max-w-xl mx-auto"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            transition={{ delay: 0.8 }}
+            className="text-base md:text-xl text-secondary font-light max-w-xl mx-auto"
           >
             {PROFILE.tagline}
           </motion.p>
         </motion.div>
         <motion.div
-          animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 text-secondary"
+          animate={{ y: [0, 10, 0] }} 
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 text-secondary"
         >
-          <ArrowDown size={24} />
+          <ArrowDown size={20} />
         </motion.div>
       </section>
 
-      {/* 2. About */}
-      <section id="about" className="py-32 px-6">
-        <div className="max-w-custom mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+      {/* 2. About - 移动端优化 */}
+      <section id="about" className="py-16 md:py-32 px-4 md:px-6">
+        <div className="max-w-custom mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="lg:col-span-4">
             <FadeIn>
               <div className="aspect-[3/4] w-full bg-surface border border-border overflow-hidden relative group">
                 <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop"
+                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop"
                   alt="Profile"
+                  loading="lazy"
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                 />
               </div>
             </FadeIn>
           </div>
-          <div className="lg:col-span-8 pt-8">
+          <div className="lg:col-span-8 pt-4 md:pt-8">
             <FadeIn delay={0.2}>
               <SectionTitle subtitle="About Me">个人简介</SectionTitle>
-              <p className="text-xl md:text-2xl leading-relaxed text-secondary font-light mb-12">
+              <p className="text-base md:text-2xl leading-relaxed text-secondary font-light mb-8 md:mb-12">
                 {PROFILE.bio}
               </p>
-              <div className="grid grid-cols-3 gap-8 border-t border-border pt-8 mb-12">
+              <div className="grid grid-cols-3 gap-4 md:gap-8 border-t border-border pt-6 md:pt-8 mb-8 md:mb-12">
                 {PROFILE.stats.map((stat, i) => (
                   <div key={i}>
-                    <div className="text-3xl md:text-4xl font-light text-primary mb-1">{stat.value}</div>
-                    <div className="text-xs text-secondary tracking-widest uppercase">{stat.label}</div>
+                    <div className="text-2xl md:text-4xl font-light text-primary mb-1">{stat.value}</div>
+                    <div className="text-[10px] md:text-xs text-secondary tracking-widest uppercase">{stat.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-4">
-                <a href={`mailto:${PROFILE.contact.email}`} className="px-8 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors">
+              <div className="flex flex-wrap gap-3 md:gap-4">
+                <a href={`mailto:${PROFILE.contact.email}`} className="px-6 md:px-8 py-2.5 md:py-3 bg-white text-black text-xs md:text-sm font-medium hover:bg-gray-200 transition-colors">
                   发送邮件
                 </a>
-                <Link to="/portfolio" className="px-8 py-3 border border-border text-white text-sm font-medium hover:bg-white/5 transition-colors flex items-center gap-2">
-                  查看完整作品集 <ExternalLink size={14} />
+                <Link to="/portfolio" className="px-6 md:px-8 py-2.5 md:py-3 border border-border text-white text-xs md:text-sm font-medium hover:bg-white/5 transition-colors flex items-center gap-2">
+                  查看完整作品集 <ExternalLink size={12} md:size={14} />
                 </Link>
               </div>
             </FadeIn>
@@ -942,94 +996,49 @@ function HomePage() {
         </div>
       </section>
 
-      {/* 3. Selected Works - 2x2布局：美妆+日化一行，3C+家电一行 */}
-      <section id="work" className="py-32 px-6 bg-surface/30">
+      {/* 3. Selected Works - 移动端优化 */}
+      <section id="work" className="py-16 md:py-32 px-4 md:px-6 bg-surface/30">
         <div className="max-w-custom mx-auto">
           <FadeIn>
             <SectionTitle subtitle="Selected Works">精选项目</SectionTitle>
           </FadeIn>
 
-          {/* 第一行：美妆 + 日化 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {PROJECTS.slice(0, 2).map((project, index) => (
-              <FadeIn key={project.id} delay={index * 0.15}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {PROJECTS.map((project, index) => (
+              <FadeIn key={project.id} delay={index * 0.1}>
                 <div 
                   className="group block cursor-pointer"
                   onClick={() => handleProjectClick(project.category)}
                 >
-                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-6 relative">
+                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-4 md:mb-6 relative">
                     <img
                       src={project.cover}
                       alt={project.title}
+                      loading="lazy"
                       className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-4 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                       点击查看该分类作品 →
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-baseline mb-3">
-                    <h3 className="text-2xl font-medium text-primary group-hover:text-white transition-colors">
+                  <div className="flex justify-between items-baseline mb-2 md:mb-3">
+                    <h3 className="text-lg md:text-2xl font-medium text-primary group-hover:text-white transition-colors">
                       {project.title}
                     </h3>
-                    <span className="text-xs text-secondary tracking-wider uppercase">
+                    <span className="text-[10px] md:text-xs text-secondary tracking-wider uppercase">
                       {project.categoryLabel}
                     </span>
                   </div>
 
-                  <p className="text-secondary text-sm leading-relaxed mb-4 max-w-lg">
+                  <p className="text-secondary text-xs md:text-sm leading-relaxed mb-3 md:mb-4 max-w-lg">
                     {project.desc}
                   </p>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 md:gap-2">
                     {project.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-1 border border-border text-secondary rounded-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-
-          {/* 第二行：3C数码 + 家电 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {PROJECTS.slice(2, 4).map((project, index) => (
-              <FadeIn key={project.id} delay={index * 0.15}>
-                <div 
-                  className="group block cursor-pointer"
-                  onClick={() => handleProjectClick(project.category)}
-                >
-                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-6 relative">
-                    <img
-                      src={project.cover}
-                      alt={project.title}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-4 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                      点击查看该分类作品 →
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-baseline mb-3">
-                    <h3 className="text-2xl font-medium text-primary group-hover:text-white transition-colors">
-                      {project.title}
-                    </h3>
-                    <span className="text-xs text-secondary tracking-wider uppercase">
-                      {project.categoryLabel}
-                    </span>
-                  </div>
-
-                  <p className="text-secondary text-sm leading-relaxed mb-4 max-w-lg">
-                    {project.desc}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-1 border border-border text-secondary rounded-sm">
+                      <span key={tag} className="text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 md:py-1 border border-border text-secondary rounded-sm">
                         {tag}
                       </span>
                     ))}
@@ -1041,18 +1050,18 @@ function HomePage() {
         </div>
       </section>
 
-      {/* 4. Advantages & Skills */}
-      <section id="skills" className="py-32 px-6">
+      {/* 4. Advantages & Skills - 移动端优化 */}
+      <section id="skills" className="py-16 md:py-32 px-4 md:px-6">
         <div className="max-w-custom mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-24">
             <div>
               <FadeIn>
                 <SectionTitle subtitle="Advantages">专业优势</SectionTitle>
-                <div className="space-y-12">
+                <div className="space-y-8 md:space-y-12">
                   {ADVANTAGES.map((adv, i) => (
-                    <div key={i} className="border-l border-border pl-6 hover:border-white transition-colors duration-300">
-                      <h4 className="text-lg font-medium text-primary mb-2">{adv.title}</h4>
-                      <p className="text-secondary text-sm leading-relaxed">{adv.desc}</p>
+                    <div key={i} className="border-l border-border pl-4 md:pl-6 hover:border-white transition-colors duration-300">
+                      <h4 className="text-base md:text-lg font-medium text-primary mb-1.5 md:mb-2">{adv.title}</h4>
+                      <p className="text-secondary text-xs md:text-sm leading-relaxed">{adv.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -1061,15 +1070,15 @@ function HomePage() {
             <div>
               <FadeIn delay={0.3}>
                 <SectionTitle subtitle="Tech Stack">核心技能</SectionTitle>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   {SKILLS.map((skill, i) => (
-                    <div key={i} className="p-5 border border-border bg-surface/50 hover:bg-surface transition-colors group">
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-3 text-primary group-hover:text-white">
+                    <div key={i} className="p-4 md:p-5 border border-border bg-surface/50 hover:bg-surface transition-colors group">
+                      <div className="flex justify-between items-center mb-2 md:mb-3">
+                        <div className="flex items-center gap-2 md:gap-3 text-primary group-hover:text-white">
                           {skill.icon}
-                          <span className="font-medium">{skill.name}</span>
+                          <span className="text-sm md:text-base font-medium">{skill.name}</span>
                         </div>
-                        <span className="text-xs text-secondary">{skill.level}%</span>
+                        <span className="text-[10px] md:text-xs text-secondary">{skill.level}%</span>
                       </div>
                       <div className="w-full h-[2px] bg-border overflow-hidden">
                         <motion.div
@@ -1089,36 +1098,36 @@ function HomePage() {
         </div>
       </section>
 
-      {/* 5. Footer / Contact */}
-      <section id="contact" className="min-h-screen flex flex-col justify-center px-6 border-t border-border relative overflow-hidden">
+      {/* 5. Footer / Contact - 移动端优化 */}
+      <section id="contact" className="min-h-screen flex flex-col justify-center px-4 md:px-6 border-t border-border relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap pointer-events-none select-none opacity-[0.03]">
-          <span className="text-[20vw] font-bold leading-none">CONTACT</span>
+          <span className="text-[25vw] md:text-[20vw] font-bold leading-none">CONTACT</span>
         </div>
         <div className="max-w-custom mx-auto w-full relative z-10">
           <FadeIn>
-            <p className="text-secondary tracking-[0.3em] text-sm mb-8 uppercase">Get In Touch</p>
-            <h2 className="text-5xl md:text-8xl font-bold tracking-tighter mb-16 break-words">
+            <p className="text-secondary tracking-[0.3em] text-xs md:text-sm mb-6 md:mb-8 uppercase">Get In Touch</p>
+            <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-10 md:mb-16 break-words">
               期待与您<br />共创视觉佳作
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-border pt-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 border-t border-border pt-8 md:pt-12">
               <div>
-                <h5 className="text-xs text-secondary uppercase tracking-widest mb-4">Email</h5>
-                <a href={`mailto:${PROFILE.contact.email}`} className="text-xl md:text-2xl hover:text-secondary transition-colors break-all">
+                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Email</h5>
+                <a href={`mailto:${PROFILE.contact.email}`} className="text-base md:text-2xl hover:text-secondary transition-colors break-all">
                   {PROFILE.contact.email}
                 </a>
               </div>
               <div>
-                <h5 className="text-xs text-secondary uppercase tracking-widest mb-4">Phone</h5>
-                <a href={`tel:${PROFILE.contact.phone}`} className="text-xl md:text-2xl hover:text-secondary transition-colors">
+                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Phone</h5>
+                <a href={`tel:${PROFILE.contact.phone}`} className="text-base md:text-2xl hover:text-secondary transition-colors">
                   {PROFILE.contact.phone}
                 </a>
               </div>
               <div>
-                <h5 className="text-xs text-secondary uppercase tracking-widest mb-4">Location</h5>
-                <p className="text-xl md:text-2xl">{PROFILE.contact.city}</p>
+                <h5 className="text-[10px] md:text-xs text-secondary uppercase tracking-widest mb-3 md:mb-4">Location</h5>
+                <p className="text-base md:text-2xl">{PROFILE.contact.city}</p>
               </div>
             </div>
-            <div className="mt-32 flex justify-between items-end text-secondary text-xs">
+            <div className="mt-20 md:mt-32 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 text-secondary text-[10px] md:text-xs">
               <p>© {new Date().getFullYear()} {PROFILE.name}. All Rights Reserved.</p>
               <p>Designed for 3D Artistry</p>
             </div>
@@ -1129,14 +1138,13 @@ function HomePage() {
   );
 }
 
-// --- 二级页面：完整作品集（支持URL参数筛选） ---
+// --- 二级页面：完整作品集（移动端优化） ---
 function PortfolioPage() {
   const [activeCategory, setActiveCategory] = useState("全部");
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 从URL参数中读取分类
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const category = params.get("category");
@@ -1157,7 +1165,6 @@ function PortfolioPage() {
     return ALL_WORKS.filter(work => work.category === category).length;
   };
 
-  // 更新URL参数
   const handleCategoryChange = (category) => {
     setActiveCategory(category);
     if (category === "全部") {
@@ -1169,73 +1176,69 @@ function PortfolioPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 顶部导航 */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 md:px-6 py-3 md:py-4">
         <div className="max-w-custom mx-auto flex justify-between items-center">
           <button
             onClick={() => navigate("/")}
             className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
           >
-            <ArrowLeft size={18} />
-            <span className="text-sm">返回首页</span>
+            <ArrowLeft size={16} md:size={18} />
+            <span className="text-xs md:text-sm">返回首页</span>
           </button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-secondary">完整作品集</span>
+          <div className="flex items-center gap-3 md:gap-4">
+            <span className="text-xs md:text-sm text-secondary">完整作品集</span>
             <Link
               to="/login"
               className="flex items-center gap-1 text-secondary hover:text-white transition-colors"
               title="作者中心"
             >
-              <Settings size={16} />
+              <Settings size={16} md:size={18} />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 标题 */}
-      <div className="px-6 pt-16 pb-8">
+      <div className="px-4 md:px-6 pt-10 md:pt-16 pb-6 md:pb-8">
         <div className="max-w-custom mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
+          <h1 className="text-3xl md:text-6xl font-bold tracking-tighter mb-3 md:mb-4">
             {activeCategory === "全部" ? "全部作品" : activeCategory}
           </h1>
-          <p className="text-secondary text-lg max-w-2xl mb-4">
+          <p className="text-secondary text-sm md:text-lg max-w-2xl mb-3 md:mb-4">
             涵盖美妆产品、3C数码、日化产品、家电产品等3D创作方向
           </p>
-          <div className="flex gap-6 text-sm text-secondary">
+          <div className="flex gap-4 md:gap-6 text-xs md:text-sm text-secondary">
             <span>共 {ALL_WORKS.length} 个作品</span>
             <span>当前显示 {filteredWorks.length} 个</span>
           </div>
         </div>
       </div>
 
-      {/* 搜索框 */}
-      <div className="px-6 pb-6">
+      <div className="px-4 md:px-6 pb-4 md:pb-6">
         <div className="max-w-custom mx-auto">
           <input
             type="text"
             placeholder="搜索作品..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-96 px-4 py-3 bg-surface border border-border text-white placeholder-secondary focus:border-white focus:outline-none transition-colors"
+            className="w-full md:w-96 px-3 md:px-4 py-2.5 md:py-3 bg-surface border border-border text-white text-sm placeholder-secondary focus:border-white focus:outline-none transition-colors"
           />
         </div>
       </div>
 
-      {/* 分类筛选 */}
-      <div className="px-6 pb-12">
-        <div className="max-w-custom mx-auto flex flex-wrap gap-3">
+      <div className="px-4 md:px-6 pb-8 md:pb-12">
+        <div className="max-w-custom mx-auto flex flex-wrap gap-2 md:gap-3">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
-              className={`px-5 py-2 text-sm border transition-all duration-300 ${
+              className={`px-3 md:px-5 py-1.5 md:py-2 text-xs md:text-sm border transition-all duration-300 ${
                 activeCategory === cat
                   ? "bg-white text-black border-white"
                   : "border-border text-secondary hover:border-white hover:text-white"
               }`}
             >
               {cat}
-              <span className="ml-2 text-xs opacity-60">
+              <span className="ml-1.5 md:ml-2 text-[10px] md:text-xs opacity-60">
                 ({getCategoryCount(cat)})
               </span>
             </button>
@@ -1243,52 +1246,52 @@ function PortfolioPage() {
         </div>
       </div>
 
-      {/* 作品网格 */}
-      <div className="px-6 pb-24">
+      <div className="px-4 md:px-6 pb-16 md:pb-24">
         <div className="max-w-custom mx-auto">
           {filteredWorks.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">🔍</div>
-              <p className="text-secondary text-lg mb-4">未找到相关作品</p>
+            <div className="text-center py-16 md:py-20">
+              <div className="text-4xl md:text-6xl mb-3 md:mb-4">🔍</div>
+              <p className="text-secondary text-sm md:text-lg mb-3 md:mb-4">未找到相关作品</p>
               <button
                 onClick={() => {
                   setActiveCategory("全部");
                   setSearchTerm("");
                   navigate("/portfolio");
                 }}
-                className="px-6 py-2 border border-border text-white text-sm hover:bg-white/5 transition-colors"
+                className="px-5 md:px-6 py-2 md:py-2.5 border border-border text-white text-xs md:text-sm hover:bg-white/5 transition-colors"
               >
                 查看全部作品
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredWorks.map((work, index) => (
                 <motion.div
                   key={work.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                   className="group cursor-pointer"
                   onClick={() => navigate(`/work/${work.slug}`)}
                 >
-                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-4 relative">
+                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-3 md:mb-4 relative">
                     <img
                       src={work.image}
                       alt={work.title}
+                      loading="lazy"
                       className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                     />
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 text-xs text-white">
+                    <div className="absolute top-2 md:top-3 left-2 md:left-3 bg-black/60 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs text-white">
                       {work.category}
                     </div>
-                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-4 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 bg-black/60 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                       查看详情 →
                     </div>
                   </div>
-                  <h3 className="text-lg font-medium text-primary group-hover:text-white transition-colors mb-1">
+                  <h3 className="text-base md:text-lg font-medium text-primary group-hover:text-white transition-colors mb-1">
                     {work.title}
                   </h3>
-                  <p className="text-sm text-secondary">{work.desc}</p>
+                  <p className="text-xs md:text-sm text-secondary">{work.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -1299,14 +1302,13 @@ function PortfolioPage() {
   );
 }
 
-// --- 三级页面：产品详情页 ---
+// --- 三级页面：产品详情页（移动端优化） ---
 function WorkDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const work = ALL_WORKS.find(w => w.slug === slug);
   const [selectedImage, setSelectedImage] = useState(work?.detail.images[0] || "");
 
-  // 当slug变化时重置选中的图片
   useEffect(() => {
     if (work) {
       setSelectedImage(work.detail.images[0]);
@@ -1315,12 +1317,12 @@ function WorkDetailPage() {
 
   if (!work) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">作品不存在</h1>
+          <h1 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">作品不存在</h1>
           <button
             onClick={() => navigate("/portfolio")}
-            className="px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="px-5 md:px-6 py-2.5 md:py-3 bg-white text-black text-xs md:text-sm font-medium hover:bg-gray-200 transition-colors"
           >
             返回作品集
           </button>
@@ -1331,41 +1333,39 @@ function WorkDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 顶部导航 */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 md:px-6 py-3 md:py-4">
         <div className="max-w-custom mx-auto flex justify-between items-center">
           <button
             onClick={() => navigate("/portfolio")}
             className="flex items-center gap-2 text-secondary hover:text-white transition-colors"
           >
-            <ArrowLeft size={18} />
-            <span className="text-sm">返回作品集</span>
+            <ArrowLeft size={16} md:size={18} />
+            <span className="text-xs md:text-sm">返回作品集</span>
           </button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-secondary">{work.category}</span>
+          <div className="flex items-center gap-3 md:gap-4">
+            <span className="text-xs md:text-sm text-secondary">{work.category}</span>
             <Link
               to="/login"
               className="flex items-center gap-1 text-secondary hover:text-white transition-colors"
               title="作者中心"
             >
-              <Settings size={16} />
+              <Settings size={16} md:size={18} />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 作品标题 */}
-      <div className="px-6 pt-16 pb-8">
+      <div className="px-4 md:px-6 pt-10 md:pt-16 pb-6 md:pb-8">
         <div className="max-w-custom mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
+          <h1 className="text-2xl md:text-6xl font-bold tracking-tighter mb-4 md:mb-6">
             {work.detail.title}
           </h1>
-          <p className="text-secondary text-lg leading-relaxed max-w-3xl mb-6">
+          <p className="text-secondary text-sm md:text-lg leading-relaxed max-w-3xl mb-4 md:mb-6">
             {work.detail.description}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 md:gap-2">
             {work.detail.tags.map(tag => (
-              <span key={tag} className="text-xs px-3 py-1 border border-border text-secondary rounded-sm">
+              <span key={tag} className="text-[10px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 border border-border text-secondary rounded-sm">
                 {tag}
               </span>
             ))}
@@ -1373,8 +1373,7 @@ function WorkDetailPage() {
         </div>
       </div>
 
-      {/* 主图展示 */}
-      <div className="px-6 pb-8">
+      <div className="px-4 md:px-6 pb-6 md:pb-8">
         <div className="max-w-custom mx-auto">
           <div className="aspect-[16/9] bg-surface border border-border overflow-hidden">
             <img
@@ -1386,14 +1385,13 @@ function WorkDetailPage() {
         </div>
       </div>
 
-      {/* 缩略图列表 */}
       {work.detail.images.length > 1 && (
-        <div className="px-6 pb-24">
+        <div className="px-4 md:px-6 pb-16 md:pb-24">
           <div className="max-w-custom mx-auto">
-            <h3 className="text-sm text-secondary uppercase tracking-widest mb-4">
+            <h3 className="text-xs md:text-sm text-secondary uppercase tracking-widest mb-3 md:mb-4">
               作品图集
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-4">
               {work.detail.images.map((img, index) => (
                 <button
                   key={index}
@@ -1407,6 +1405,7 @@ function WorkDetailPage() {
                   <img
                     src={img}
                     alt={`${work.detail.title} - ${index + 1}`}
+                    loading="lazy"
                     className="w-full h-full object-cover"
                   />
                 </button>
@@ -1416,13 +1415,12 @@ function WorkDetailPage() {
         </div>
       )}
 
-      {/* 相关作品推荐 */}
-      <div className="px-6 pb-24">
+      <div className="px-4 md:px-6 pb-16 md:pb-24">
         <div className="max-w-custom mx-auto">
-          <h3 className="text-sm text-secondary uppercase tracking-widest mb-6">
+          <h3 className="text-xs md:text-sm text-secondary uppercase tracking-widest mb-4 md:mb-6">
             同分类其他作品
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
             {ALL_WORKS
               .filter(w => w.category === work.category && w.id !== work.id)
               .slice(0, 3)
@@ -1434,14 +1432,15 @@ function WorkDetailPage() {
                     navigate(`/work/${relatedWork.slug}`);
                   }}
                 >
-                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-3 relative">
+                  <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-2 md:mb-3 relative">
                     <img
                       src={relatedWork.image}
                       alt={relatedWork.title}
+                      loading="lazy"
                       className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                     />
                   </div>
-                  <h4 className="text-sm font-medium text-primary group-hover:text-white transition-colors">
+                  <h4 className="text-xs md:text-sm font-medium text-primary group-hover:text-white transition-colors">
                     {relatedWork.title}
                   </h4>
                 </div>
