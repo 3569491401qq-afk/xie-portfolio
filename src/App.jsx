@@ -12,7 +12,7 @@ const PROFILE = {
   bio: "1.5年经验的独立3D艺术家，深耕3D建模与渲染领域。精通Cinema 4D与Blender双软件工作流，熟练使用Octane/Redshift/Cycles等主流渲染器。聚焦广告设计方向，擅长产品视觉化与场景构建，追求照片级渲染品质。",
   contact: {
     phone: "193 8854 5612",
-    email: "your.email@example.com",
+  email: "3569491401@qq.com",
     city: "China",
     portfolio: "#"
   },
@@ -37,17 +37,17 @@ const PROJECTS = [
     id: 1,
     title: "高端美妆产品超写实渲染",
     category: "C4D + Octane",
-    desc: "针对唇釉、精华液等化妆品进行精细建模与材质还原。攻克液体质感、玻璃瓶身反射与细腻材质细节，产出具有高级商业广告质感的超写实视觉图像。",
-    tags: ["硬表面建模", "材质节点", "光影控制", "产品可视化"],
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4f9d?q=80&w=2000&auto=format&fit=crop"
+    desc: "为美妆品牌进行产品可视化建模与渲染。针对唇釉、精华液等化妆品进行精细建模与材质还原，重点攻克液体质感、玻璃瓶身反射与细腻材质细节，通过精准的光影控制，产出具有高级商业广告质感的超写实视觉图像。",
+    tags: ["硬表面建模", "材质节点搭建", "光影控制", "产品可视化"],
+    image: "/images/1.png"
   },
   {
     id: 2,
-    title: "大型游戏场景资产开发",
+    title: "3C数码产品商业渲染",
     category: "Blender + Cycles",
-    desc: "负责游戏场景环境资产制作：构建地形、建筑及环境装饰物等大规模资产。优化模型拓扑与场景结构，结合Cycles引擎调试环境光影，保证视觉冲击力与空间逻辑统一。",
-    tags: ["场景构筑", "资产开发", "拓扑优化", "环境光照"],
-    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop"
+    desc: "为3C数码品牌进行产品可视化建模与渲染。针对手机、耳机、智能手表等数码产品进行高精度建模与材质还原，重点攻克金属拉丝质感、磨砂表面、屏幕玻璃反射与精密结构细节，结合Cycles引擎进行光影调试，产出具有科技感与商业广告品质的超写实视觉图像。",
+    tags: ["硬表面建模", "金属材质", "产品渲染", "商业可视化"],
+    image: "/images/游戏手柄_01_后期.png"
   }
 ];
 
