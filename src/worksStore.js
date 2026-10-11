@@ -309,12 +309,35 @@ export async function publishWorks(works, cfg, onProgress = () => {}) {
     "X-GitHub-Api-Version": "2022-11-28",
   };
 
+  /** 把 GitHub 的原始报错翻译成「人话 + 下一步怎么办」 */
+  function explain(status, rawText) {
+    const trimmed = (rawText || "").replace(/\s+/g, " ").slice(0, 150);
+    if (status === 401) {
+      return "Token 无效或已过期。请到 GitHub 重新生成一个，再到「仓库」里粘一次。";
+    }
+    if (status === 403 && /not accessible by personal access token/i.test(rawText || "")) {
+      return [
+        "这个 Token 只能读、不能写。",
+        "去 GitHub 打开这个 Token：Repository access 要选 Only select repositories 并勾上 " + repo + "；",
+        "Permissions → Contents 改成 Read and write。改权限不用重新生成 Token，改完直接再发布一次。",
+      ].join("");
+    }
+    if (status === 403) {
+      return "权限不足。检查 Token 的 Contents 权限是不是 Read and write（原始信息：" + trimmed + "）";
+    }
+    if (status === 404) {
+      return `找不到仓库或分支。检查「仓库」设置里的用户名/仓库名/分支对不对（当前：${owner}/${repo} @ ${branch}）。`;
+    }
+    if (status === 409) {
+      return "文件冲突，通常是分支上有新提交。回作品管理点一次「拉取线上」再发布。";
+    }
+    return `GitHub 返回 ${status}：${trimmed}`;
+  }
+
   async function getSha(path) {
     const res = await fetch(`${root}/${encodeURIComponent(path)}?ref=${branch}`, { headers });
     if (res.status === 404) return undefined;
-    if (res.status === 401) throw new Error("GitHub Token 无效或已过期");
-    if (res.status === 403) throw new Error("Token 权限不足（需要 Contents 读写权限）");
-    if (!res.ok) throw new Error(`读取 ${path} 失败：${res.status}`);
+    if (!res.ok) throw new Error(explain(res.status, await res.text()));
     const json = await res.json();
     return json.sha;
   }
@@ -332,8 +355,7 @@ export async function publishWorks(works, cfg, onProgress = () => {}) {
       }),
     });
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`写入 ${path} 失败：${res.status} ${text.slice(0, 180)}`);
+      throw new Error(`写入 ${path} 失败 —— ${explain(res.status, await res.text())}`);
     }
     return res.json();
   }

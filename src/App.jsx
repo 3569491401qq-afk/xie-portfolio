@@ -652,6 +652,7 @@ function AdminPage() {
   const { works, ready, persist } = useWorks();
   const [showAddForm, setShowAddForm] = useState(false);
   const [status, setStatus] = useState("");
+  const [statusKind, setStatusKind] = useState("info");
   const [busy, setBusy] = useState("");
   const [newWork, setNewWork] = useState(blankWork());
   const [newImages, setNewImages] = useState([]);
@@ -661,11 +662,17 @@ function AdminPage() {
   const [unpublished, setUnpublished] = useState(false);
   const fileInputRef = useRef(null);
 
+  // 普通提示 2.8 秒后自动消失；报错不自动消失，等用户自己关掉（否则长报错根本来不及看）
   useEffect(() => {
-    if (!status) return;
-    const t = setTimeout(() => setStatus(""), 2600);
+    if (!status || statusKind === "error") return;
+    const t = setTimeout(() => setStatus(""), 2800);
     return () => clearTimeout(t);
-  }, [status]);
+  }, [status, statusKind]);
+
+  const notify = useCallback((message, kind = "info") => {
+    setStatus(message);
+    setStatusKind(kind);
+  }, []);
 
   // 每次作品变化后重算「有没有未发布的改动」
   useEffect(() => {
@@ -681,7 +688,7 @@ function AdminPage() {
   const handlePublish = async () => {
     if (!ghConfig.token) {
       setShowRepoPanel(true);
-      setStatus("先填 GitHub Token 才能发布");
+      notify("还没填 GitHub Token。点右上角「仓库」按钮填一下再发布。", "error");
       return;
     }
     if (!window.confirm(`把当前 ${works.length} 个作品发布到 ${ghConfig.owner}/${ghConfig.repo}？\n\n提交后 Vercel 会自动重新构建，大约 1 分钟后全网生效。`)) {
@@ -691,10 +698,10 @@ function AdminPage() {
       setPublishing("准备中…");
       const res = await publishWorks(works, ghConfig, (msg) => setPublishing(msg));
       setUnpublished(false);
-      setStatus(`已发布：${res.works} 个作品、${res.images} 张新图。Vercel 构建中，约 1 分钟后生效。`);
+      notify(`已发布：${res.works} 个作品、${res.images} 张新图。Vercel 构建中，约 1 分钟后生效。`);
     } catch (e) {
       console.error(e);
-      setStatus(`发布失败：${e.message}`);
+      notify(`发布失败 —— ${e.message}`, "error");
     } finally {
       setPublishing("");
     }
@@ -703,20 +710,20 @@ function AdminPage() {
   const handleSaveGhConfig = () => {
     saveGhConfig(ghConfig);
     setShowRepoPanel(false);
-    setStatus("仓库配置已保存在本机浏览器");
+    notify("仓库配置已保存在本机浏览器");
   };
 
   const handlePullRemote = async () => {
     if (!window.confirm("用线上数据覆盖本地草稿？本地未发布的改动会丢掉。")) return;
     await pullFromRemote(ALL_WORKS);
     setUnpublished(false);
-    setStatus("已从线上重新拉取");
+    notify("已从线上重新拉取");
   };
 
   const handleDeleteWork = async (work) => {
     if (!window.confirm(`确定删除「${work.title}」吗？此操作不可撤销。`)) return;
     const res = await persist(works.filter((w) => w.id !== work.id));
-    setStatus(res.ok ? "已删除" : "删除失败：本地存储写入被拒绝");
+    notify(res.ok ? "已删除" : "删除失败：本地存储写入被拒绝", res.ok ? "info" : "error");
   };
 
   /* 添加作品 */
@@ -738,7 +745,7 @@ function AdminPage() {
 
   const handleAddWork = async () => {
     if (!newWork.title.trim()) {
-      setStatus("请先填写作品标题");
+      notify("请先填写作品标题", "error");
       return;
     }
     const nextId = works.reduce((m, w) => Math.max(m, Number(w.id) || 0), 0) + 1;
@@ -761,7 +768,7 @@ function AdminPage() {
     if (res.ok) {
       navigate(`/admin/work/${nextId}`);
     } else {
-      setStatus("保存失败：本地存储写入被拒绝（可能是图片太大）");
+      notify("保存失败：本地存储写入被拒绝（可能是图片太大）", "error");
     }
   };
 
@@ -781,14 +788,14 @@ function AdminPage() {
     a.download = "xie-portfolio-works.json";
     a.click();
     URL.revokeObjectURL(a.href);
-    setStatus(copied ? "已复制到剪贴板，同时下载了一份 JSON" : "已下载 JSON 文件");
+    notify(copied ? "已复制到剪贴板，同时下载了一份 JSON" : "已下载 JSON 文件");
   };
 
   const handleReset = async () => {
     if (!window.confirm("确定放弃所有本地改动、回到线上那一版吗？")) return;
     await discardDraft(ALL_WORKS);
     setUnpublished(false);
-    setStatus("已丢弃本地改动");
+    notify("已丢弃本地改动");
   };
 
   return (
@@ -933,7 +940,7 @@ function AdminPage() {
                 onClick={() => {
                   clearGhConfig();
                   setGhConfig({ owner: "", repo: "", branch: "main", token: "" });
-                  setStatus("已清除本机保存的 Token");
+                  notify("已清除本机保存的 Token");
                 }}
                 className="px-5 py-3 border border-border text-secondary hover:text-white hover:bg-white/5 transition-colors text-sm"
               >
@@ -1099,8 +1106,28 @@ function AdminPage() {
       </div>
 
       {status && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-5 py-3 bg-white text-black text-xs md:text-sm font-medium shadow-lg">
-          {status}
+        <div
+          role={statusKind === "error" ? "alert" : "status"}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 md:px-5 py-3 text-xs md:text-sm shadow-lg flex items-start gap-3 w-[calc(100%-2rem)] max-w-2xl ${
+            statusKind === "error"
+              ? "bg-red-950 border border-red-500/50 text-red-100"
+              : "bg-white text-black font-medium"
+          }`}
+        >
+          {statusKind === "error" && (
+            <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+          )}
+          {/* 报错可能是长句，允许换行，别硬撑成一整行 */}
+          <span className="leading-relaxed whitespace-pre-line flex-1">{status}</span>
+          <button
+            onClick={() => setStatus("")}
+            aria-label="关闭提示"
+            className={`shrink-0 transition-colors ${
+              statusKind === "error" ? "text-red-300 hover:text-white" : "text-black/40 hover:text-black"
+            }`}
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
 
