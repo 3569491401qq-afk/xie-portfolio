@@ -187,6 +187,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: 9px 14px;
   border-radius: var(--r-pill);
   font-size: 13.5px;
+  white-space: nowrap;
   color: var(--ink-2);
   transition: color 0.25s var(--ease), background 0.25s var(--ease);
 }
@@ -217,49 +218,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   transition: border-color 0.25s var(--ease), color 0.25s var(--ease);
 }
 .nav-auth:hover { border-color: var(--line-strong); color: var(--ink); }
-
-/* ---------- 窄屏菜单：链接收进按钮 + 下拉面板 ---------- */
-.nav-burger {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  width: 40px;
-  height: 40px;
-  padding: 0 10px;
-  margin-left: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-}
-.nav-burger span {
-  display: block;
-  height: 1px;
-  background: var(--ink-2);
-  transition: transform 0.3s var(--ease);
-}
-.nav-burger span.is-x:first-child { transform: translateY(3.5px) rotate(45deg); }
-.nav-burger span.is-x:last-child { transform: translateY(-3.5px) rotate(-45deg); }
-.nav-menu {
-  display: none;
-  flex-direction: column;
-  padding: 6px var(--gut) 16px;
-  border-top: 1px solid var(--line);
-  background: rgba(10, 12, 15, 0.96);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-.nav-menu-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 13px 2px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 15px;
-  color: var(--ink-2);
-  text-align: left;
-}
-.nav-menu-link:last-child { border-bottom: 0; }
-.nav-menu-auth { color: var(--accent); }
 
 /* ---------- 首屏 ---------- */
 
@@ -775,10 +733,11 @@ section[id] { scroll-margin-top: 92px; }
   .feat-media { aspect-ratio: 4 / 3; }
   .trio { grid-template-columns: minmax(0, 1fr); }
   .nav-inner { height: 62px; }
-  /* 窄屏：一行排不下六个链接，收进菜单按钮 */
-  .nav-links { display: none; }
-  .nav-burger { display: flex; }
-  .nav-menu { display: flex; }
+  /* 窄屏：六个链接全部保留，靠缩小内边距和字号排下；作者中心按钮让位 */
+  .nav-links { gap: 0; }
+  .nav-link { padding: 7px 9px; font-size: 12.5px; }
+  .nav-link::after { left: 9px; right: 9px; bottom: 2px; }
+  .nav-auth { display: none; }
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .stage img { height: 58vh; }
   .stage, .stage-video { min-height: 0; }
@@ -795,7 +754,11 @@ section[id] { scroll-margin-top: 92px; }
   .caps { grid-template-columns: minmax(0, 1fr); }
   .services { grid-template-columns: minmax(0, 1fr); }
   .process { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-  .brand-role { display: none; }
+  /* 手机上署名只留「谢」字方块，把宽度让给导航链接 */
+  .brand-text { display: none; }
+  .nav-inner { gap: 10px; }
+  .nav-link { padding: 6px 7px; font-size: 12px; }
+  .nav-link::after { left: 7px; right: 7px; }
   .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stat-v { font-size: 1.25rem; }
 }

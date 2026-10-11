@@ -356,7 +356,6 @@ function useGoToSection() {
 
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
   const goTo = useGoToSection();
 
   useEffect(() => {
@@ -375,16 +374,10 @@ function Nav() {
     { id: "contact", label: "联系" },
   ];
 
-  // 窄屏下链接收进菜单面板，点完即收
-  const go = (id) => {
-    setOpen(false);
-    goTo(id);
-  };
-
   return (
     <header className={`nav${scrolled ? " is-scrolled" : ""}`}>
       <div className="wrap nav-inner">
-        <Link to="/" className="brand" aria-label="回到首页" onClick={() => setOpen(false)}>
+        <Link to="/" className="brand" aria-label="回到首页">
           <span className="brand-mark" aria-hidden="true">{PROFILE.mark}</span>
           <span className="brand-text">
             <span className="brand-name">{PROFILE.name}</span>
@@ -397,7 +390,7 @@ function Nav() {
             <button
               key={l.id}
               className={`nav-link${l.minor ? " is-minor" : ""}`}
-              onClick={() => go(l.id)}
+              onClick={() => goTo(l.id)}
             >
               {l.label}
             </button>
@@ -408,31 +401,7 @@ function Nav() {
             作者中心
           </a>
         </nav>
-
-        <button
-          className="nav-burger"
-          aria-label={open ? "收起菜单" : "展开菜单"}
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          <span className={open ? "is-x" : ""} />
-          <span className={open ? "is-x" : ""} />
-        </button>
       </div>
-
-      {open && (
-        <div className="nav-menu">
-          {links.map((l) => (
-            <button key={l.id} className="nav-menu-link" onClick={() => go(l.id)}>
-              {l.label}
-            </button>
-          ))}
-          <a className="nav-menu-link nav-menu-auth" href="/admin">
-            <IcGear />
-            作者中心
-          </a>
-        </div>
-      )}
     </header>
   );
 }
@@ -477,10 +446,10 @@ function Hero() {
               查看作品
               <span className="btn-arrow"><IcArrow /></span>
             </button>
-            <a className="btn btn-ghost" href={`mailto:${PROFILE.email}`}>
+            <button className="btn btn-ghost" onClick={() => scrollToId("contact")}>
               联系我
-              <IcUpRight />
-            </a>
+              <span className="btn-arrow"><IcArrow /></span>
+            </button>
           </div>
         </Enter>
 
