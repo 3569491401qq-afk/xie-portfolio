@@ -38,3 +38,6 @@ assets-src/
 *.njsproj
 *.sln
 *.sw?
+
+# 单文件离线预览的构建产物（scripts/build-standalone.py 生成，不入库）
+dist-standalone

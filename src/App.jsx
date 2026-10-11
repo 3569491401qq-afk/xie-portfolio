@@ -29,6 +29,14 @@ import {
   makeVideoPoster,
   toEmbedUrl,
 } from "./worksStore.js";
+// 工作室版视觉（原本只在 preview.html 里）。现在直接作为主站的公开页面，
+// 作者中心 / 登录仍用下面 Tailwind 的老组件。
+import {
+  Home as StudioHome,
+  WorkDetail as StudioWorkDetail,
+  WorkListPage as StudioWorkList,
+} from "./preview/StudioPreview.jsx";
+import "./preview/preview.css";
 
 // --- 错误边界组件 ---
 class ErrorBoundary extends React.Component {
@@ -2584,10 +2592,13 @@ function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-background selection:bg-white/20">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
-          <Route path="/work/:slug" element={<WorkDetailPage />} />
-          <Route path="/portfolio/:slug" element={<WorkDetailPage />} />
+          {/* 公开页面 = 工作室版视觉 */}
+          <Route path="/" element={<StudioHome />} />
+          <Route path="/portfolio" element={<StudioWorkList />} />
+          <Route path="/works" element={<StudioWorkList />} />
+          <Route path="/work/:slug" element={<StudioWorkDetail />} />
+          <Route path="/portfolio/:slug" element={<StudioWorkDetail />} />
+          {/* 作者中心 / 登录：仍是原来的 Tailwind 组件 */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/work/:id" element={<AdminWorkPage />} />

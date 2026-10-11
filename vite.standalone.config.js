@@ -18,7 +18,8 @@ export default defineConfig({
     // 图片我们自己在 build-standalone.py 里 inline 成 data URI，这里别让 vite 提前转成 base64
     assetsInlineLimit: 0,
     rollupOptions: {
-      input: resolve(import.meta.dirname, 'preview.html'),
+      // 单文件版直接打包正式站入口（工作室版视觉已经合进主站 index.html 了）
+      input: resolve(import.meta.dirname, 'index.html'),
       output: {
         format: 'iife',
         // 关键：把所有 chunk（含 worksStore）合并进一个文件，消除 import

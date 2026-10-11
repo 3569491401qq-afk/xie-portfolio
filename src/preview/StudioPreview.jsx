@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
-import { mediaOf, coverOf } from "../worksStore.js";
+import { mediaOf, coverOf, loadWorks, getCachedWorks, subscribe } from "../worksStore.js";
 
 /* ---------------- 资料（与主站 PROFILE 保持一致） ---------------- */
 
@@ -284,28 +284,44 @@ function Reveal({ children, delay = 0, className = "" }) {
 
 /* ---------------- 数据 ---------------- */
 
+/**
+ * 读取作品数据 —— 走 worksStore，和作者中心（/admin）共用同一份数据。
+ *
+ * 为什么要接 store 而不是直接 fetch /works.json：
+ * 作者在后台改完作品，草稿存在 IndexedDB 里，只有「发布到线上」才会写进
+ * works.json。如果这里只读 works.json，作者本地改的东西在预览页看不到，
+ * 会以为「后台没保存成功」。接了 store 之后：
+ *   - 首屏：同步拿 getCachedWorks()（有草稿就直接渲染，不闪 loading）
+ *   - 随后：loadWorks() 补齐线上数据
+ *   - 变更：subscribe 订阅，后台一改这边立刻重渲染
+ *
+ * worksStore 内部已经处理了离线单文件场景（window.__WORKS_JSON__），
+ * 所以这里不用再单独判断。
+ */
 function useWorks() {
-  const [works, setWorks] = useState(null);
+  const [works, setWorks] = useState(() => getCachedWorks() || null);
+
   useEffect(() => {
     let alive = true;
-    (async () => {
-      // 离线单文件预览时构建脚本会注入这个全局变量
-      if (Array.isArray(window.__WORKS_JSON__)) {
-        setWorks(window.__WORKS_JSON__);
-        return;
-      }
-      try {
-        const res = await fetch("/works.json", { cache: "no-cache" });
-        const data = res.ok ? await res.json() : [];
-        if (alive) setWorks(Array.isArray(data) ? data : []);
-      } catch {
+    // 没有草稿时传空数组兜底：worksStore 会优先用草稿/线上数据，
+    // 都拿不到才回退到这个空数组，不会让页面卡在「正在载入」。
+    loadWorks([])
+      .then((w) => {
+        if (alive) setWorks(w);
+      })
+      .catch((e) => {
+        console.warn("作品数据载入失败：", e);
         if (alive) setWorks([]);
-      }
-    })();
+      });
+    const unsubscribe = subscribe((w) => {
+      if (alive) setWorks(w);
+    });
     return () => {
       alive = false;
+      unsubscribe();
     };
   }, []);
+
   return works;
 }
 
@@ -1019,7 +1035,7 @@ function Contact() {
 
 /* ---------------- 首页 ---------------- */
 
-function Home() {
+export function Home() {
   const works = useWorks();
   return (
     <>
@@ -1048,7 +1064,7 @@ function Home() {
 
 /* ---------------- 作品详情 ---------------- */
 
-function WorkDetail() {
+export function WorkDetail() {
   const { slug } = useParams();
   const works = useWorks();
   const [zoom, setZoom] = useState(null);   // 灯箱打开时存的是图片下标
@@ -1281,6 +1297,13 @@ function WorkDetail() {
 
 /* ---------------- 入口 ---------------- */
 
+/**
+ * 独立入口（preview.html / 离线单文件预览用）：
+ * 自带 HashRouter，和主站的 BrowserRouter 互不干扰。
+ *
+ * 合并进主站后，主站 App.jsx 会直接引用下面导出的 Home / WorkDetail /
+ * WorkListPage 三个页面组件，自己套路由 —— 这时不会走这个默认导出。
+ */
 export default function StudioPreview() {
   return (
     <HashRouter>
@@ -1295,7 +1318,7 @@ export default function StudioPreview() {
 }
 
 /* 独立的「全部作品」页（导航里作者中心按钮先指到这里，避免死链） */
-function WorkListPage() {
+export function WorkListPage() {
   const works = useWorks();
   return (
     <>
