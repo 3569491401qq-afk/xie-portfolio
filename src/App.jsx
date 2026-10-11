@@ -6,7 +6,7 @@ import {
   Box, Layers, Cpu, Eye, ArrowDown, Settings, LogOut,
   Plus, Trash2, Edit3, X, Image as ImageIcon, Lock,
   Upload, Check, ChevronLeft, ChevronRight,
-  Star, AlertTriangle, Download, RotateCcw
+  Star, AlertTriangle, Download, RotateCcw, Video
 } from "lucide-react";
 import {
   loadWorks,
@@ -165,7 +165,7 @@ const IMG = {
   parfumB4: "/works/parfum-b4.jpg",
   // 食品饮料
   gummy: "/works/gummy-candy.jpg",                 // 软糖 · 玻璃罐倾倒
-  shell: "/works/shell-study.jpg",                 // 扇贝 · 材质研究
+  shell: "/works/shell-study.jpg",                 // 贝壳薯片 · 材质研究
   // 3C数码
   gamepad: "/works/gamepad-retro.jpg",             // 复古游戏手柄 · 蓝幕
   gogglesHero: "/works/goggles-hero.jpg",          // 滑雪镜 · 白底主图
@@ -296,16 +296,16 @@ const ALL_WORKS = [
   },
   {
     id: 7,
-    title: "扇贝材质研究",
+    title: "贝壳薯片产品渲染",
     category: "食品饮料",
     image: IMG.shell,
-    desc: "贝壳肌理 · 色彩对比 · 微观细节",
+    desc: "卷曲薯片 · 盐粒肌理 · 高饱和撞色",
     slug: "shell-study",
     detail: {
-      title: "扇贝贝壳材质研究",
+      title: "贝壳形薯片商业渲染",
       category: "Blender + Cycles",
       description:
-        "一次偏材质研究方向的练习。逐层还原扇贝表面的放射状棱纹、生长纹与天然色斑，通过微距构图与高饱和底色强化形体与肌理的视觉张力。",
+        "一组以休闲食品为主体的产品渲染。薯片做成贝壳状，卷曲的边缘和螺旋起伏是这张图的核心 —— 要为这种连续曲面还原表面的细微起伏、边缘的锯齿切口，以及附着在起伏上的盐粒与调味粉。用微距构图压到单片上，让形体和肌理同时占满画面；橙黄渐变配高饱和黄底，把「脆」的质感靠反光和色阶层次做出来。",
       tags: ["程序化纹理", "微距构图", "肌理还原", "材质研究"],
       images: [IMG.shell],
     },
@@ -372,6 +372,43 @@ const ALL_WORKS = [
         "一组偏设计的场景练习。用长桌、圆柱、圆球与拱形构成克制的画面秩序，整体统一在暖橙色调中，依靠柔和的接触阴影和微妙的明暗过渡拉开层次，训练构图与色彩控制。",
       tags: ["场景构成", "单色调控制", "柔和阴影", "几何抽象"],
       images: [IMG.geometry],
+    },
+  },
+  {
+    id: 12,
+    title: "樱花街角微缩场景",
+    category: "硬表面与场景",
+    image: "/works/sakura-spring-orbit.jpg",
+    desc: "45 个独立资产 · 日夜双版本 · 含环绕动画",
+    slug: "sakura-corner",
+    detail: {
+      title: "樱花街角微缩场景 · 春日与雨夜",
+      category: "Blender + Eevee",
+      description:
+        "一次完整的场景创作：日式车站与便利店街角微缩模型，45 个独立资产、285 个材质、304 个对象级动画。同一套布局做了两版灯光——春日版是晴朗漫射光、干燥路面与花瓣透光；雨夜版是三层雨幕、屋檐滴水、湿地反射与暖冷光对比。开头这段是春日版的环绕镜头，4K 渲染后压成 1080p 交付。",
+      tags: ["场景搭建", "微缩模型", "程序化纹理", "电影感布光", "环绕动画"],
+      images: [
+        "/works/sakura-spring-01.jpg",
+        "/works/sakura-spring-02.jpg",
+        "/works/sakura-spring-03.jpg",
+        "/works/sakura-spring-04.jpg",
+        "/works/sakura-rain-01.jpg",
+        "/works/sakura-rain-02.jpg",
+        "/works/sakura-rain-03.jpg",
+        "/works/sakura-rain-04.jpg",
+      ],
+      media: [
+        { type: "video", src: "/works/sakura-spring-orbit.mp4", poster: "/works/sakura-spring-orbit.jpg" },
+        { type: "image", src: "/works/sakura-spring-01.jpg" },
+        { type: "image", src: "/works/sakura-spring-02.jpg" },
+        { type: "image", src: "/works/sakura-spring-03.jpg" },
+        { type: "image", src: "/works/sakura-spring-04.jpg" },
+        { type: "video", src: "/works/sakura-rain-orbit.mp4", poster: "/works/sakura-rain-orbit.jpg" },
+        { type: "image", src: "/works/sakura-rain-01.jpg" },
+        { type: "image", src: "/works/sakura-rain-02.jpg" },
+        { type: "image", src: "/works/sakura-rain-03.jpg" },
+        { type: "image", src: "/works/sakura-rain-04.jpg" },
+      ],
     },
   },
 ];
@@ -670,7 +707,10 @@ function AdminPage() {
   const [statusKind, setStatusKind] = useState("info");
   const [busy, setBusy] = useState("");
   const [newWork, setNewWork] = useState(blankWork());
-  const [newImages, setNewImages] = useState([]);
+  // 新建作品的媒体：[{type:'image'|'video'|'embed', src, poster?}]
+  // 用对象而不是字符串，才能把视频/外链一起带进来（与二级编辑页同一套模型）
+  const [newMedia, setNewMedia] = useState([]);
+  const [newEmbedUrl, setNewEmbedUrl] = useState("");
   const [ghConfig, setGhConfig] = useState(() => getGhConfig());
   const [showRepoPanel, setShowRepoPanel] = useState(false);
   const [publishing, setPublishing] = useState("");
@@ -741,21 +781,55 @@ function AdminPage() {
     notify(res.ok ? "已删除" : "删除失败：本地存储写入被拒绝", res.ok ? "info" : "error");
   };
 
-  /* 添加作品 */
+  /* 添加作品：支持图片 + 视频 + 外链（与二级编辑页 addFiles 同一套逻辑） */
   const ingNewFile = async (fileList) => {
-    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
-    setBusy(`正在处理 ${files.length} 张图片…`);
-    const urls = [];
-    for (const f of files) {
+    const all = Array.from(fileList || []);
+    const imgs = all.filter((f) => f.type.startsWith("image/"));
+    const vids = all.filter((f) => isVideoFile(f));
+    if (!imgs.length && !vids.length) return;
+
+    const added = [];
+    const warns = [];
+    const total = imgs.length + vids.length;
+    let step = 0;
+
+    for (const f of imgs) {
+      setBusy(`正在处理 ${++step}/${total}：${f.name || "图片"}`);
       try {
-        urls.push(await compressImageFile(f));
+        added.push({ type: "image", src: await compressImageFile(f) });
       } catch (e) {
         console.warn("图片处理失败：", e);
+        warns.push(`「${f.name || "图片"}」处理失败`);
       }
     }
-    setNewImages((prev) => [...prev, ...urls]);
-    setBusy("");
+
+    for (const f of vids) {
+      setBusy(`正在处理 ${++step}/${total}：${f.name || "视频"}`);
+      const mb = f.size / 1048576;
+      if (mb > 40) {
+        warns.push(`「${f.name}」有 ${mb.toFixed(0)}MB，太大没加 —— 建议先压到 10MB 以内`);
+        continue;
+      }
+      try {
+        const src = await readAsDataUrl(f);
+        const poster = await makeVideoPoster(f);
+        added.push({ type: "video", src, poster: poster || undefined, name: f.name });
+      } catch (e) {
+        console.warn("视频处理失败：", e);
+        warns.push(`「${f.name || "视频"}」读取失败`);
+      }
+    }
+
+    if (added.length) setNewMedia((prev) => [...prev, ...added]);
+    setBusy(warns.join("；"));
+  };
+
+  /* 添加作品：贴外链播放器（B 站链接自动转 player 地址） */
+  const ingNewEmbed = () => {
+    const u = toEmbedUrl(newEmbedUrl);
+    if (!u) return;
+    setNewMedia((prev) => [...prev, { type: "embed", src: u }]);
+    setNewEmbedUrl("");
   };
 
   const handleAddWork = async () => {
@@ -764,26 +838,39 @@ function AdminPage() {
       return;
     }
     const nextId = works.reduce((m, w) => Math.max(m, Number(w.id) || 0), 0) + 1;
-    const images = newImages.length ? newImages : ["/works/prop-weapon.jpg"];
+
+    // 一件媒体都没加时给个兜底封面，避免卡片空白
+    const media = newMedia.length
+      ? newMedia
+      : [{ type: "image", src: "/works/prop-weapon.jpg" }];
+    const imgs = media.filter((m) => m.type === "image").map((m) => m.src);
+    const first = media[0];
+    let cover = imgs[0] || "";
+    if (first && first.type === "image") cover = first.src;
+    else if (first && first.type === "video") cover = first.poster || imgs[0] || "";
+
     const work = {
       ...newWork,
       id: nextId,
       slug: newWork.slug.trim() || `work-${nextId}`,
-      image: images[0],
+      image: cover,
       detail: {
         ...newWork.detail,
         title: newWork.detail.title || newWork.title,
-        images,
+        // media 放完整有序列表，images 只放图片（兼容老代码）
+        media,
+        images: imgs,
       },
     };
     const res = await persist([...works, work]);
     setShowAddForm(false);
     setNewWork(blankWork());
-    setNewImages([]);
+    setNewMedia([]);
+    setNewEmbedUrl("");
     if (res.ok) {
       navigate(`/admin/work/${nextId}`);
     } else {
-      notify("保存失败：本地存储写入被拒绝（可能是图片太大）", "error");
+      notify("保存失败：本地存储写入被拒绝（可能是媒体太大）", "error");
     }
   };
 
@@ -1150,8 +1237,11 @@ function AdminPage() {
         <AddWorkModal
           newWork={newWork}
           setNewWork={setNewWork}
-          images={newImages}
-          setImages={setNewImages}
+          media={newMedia}
+          setMedia={setNewMedia}
+          embedUrl={newEmbedUrl}
+          setEmbedUrl={setNewEmbedUrl}
+          onAddEmbed={ingNewEmbed}
           onPick={ingNewFile}
           onClose={() => setShowAddForm(false)}
           onSubmit={handleAddWork}
@@ -1164,9 +1254,11 @@ function AdminPage() {
 }
 
 /* ---------- 新建作品弹窗 ---------- */
-function AddWorkModal({ newWork, setNewWork, images, setImages, onPick, onClose, onSubmit, categories, busy }) {
+function AddWorkModal({ newWork, setNewWork, media, setMedia, embedUrl, setEmbedUrl, onAddEmbed, onPick, onClose, onSubmit, categories, busy }) {
   const fileInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+  // 预览卡片封面：优先图片，其次视频封面；外链没有缩略图
+  const coverOfMedia = (m) => (m.type === "image" ? m.src : m.type === "video" ? m.poster : "");
 
   useEffect(() => {
     const onPaste = (e) => {
@@ -1199,7 +1291,7 @@ function AddWorkModal({ newWork, setNewWork, images, setImages, onPick, onClose,
         </div>
 
         <div className="mb-4 md:mb-6">
-          <label className="block text-xs md:text-sm text-secondary mb-2">作品图片（可多张）</label>
+          <label className="block text-xs md:text-sm text-secondary mb-2">作品媒体（图片 / 视频，可多选）</label>
           <div
             className={`border-2 border-dashed p-5 md:p-7 text-center cursor-pointer transition-colors ${
               dragOver ? "border-white bg-white/5" : "border-border hover:border-white"
@@ -1219,34 +1311,77 @@ function AddWorkModal({ newWork, setNewWork, images, setImages, onPick, onClose,
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               multiple
               onChange={(e) => onPick(e.target.files)}
               className="hidden"
             />
             <Upload size={22} className="mx-auto mb-2 md:mb-3 text-secondary" />
             <p className="text-secondary text-xs md:text-sm mb-1">
-              点击选择、拖拽进来，或直接 Ctrl+V 粘贴
+              点击选择、拖拽进来，或直接 Ctrl+V 粘贴图片
             </p>
             <p className="text-[10px] md:text-xs text-secondary/60">
-              支持多张，会自动压缩；第一张作为封面，进去之后随时能改
+              图片自动压缩；视频不超过 40MB，会自动抽一帧当封面。顺序即详情页展示顺序
             </p>
           </div>
 
-          {images.length > 0 && (
+          {/* 外链播放器（B 站等），零体积 */}
+          <div className="flex gap-2 mt-3">
+            <input
+              type="text"
+              value={embedUrl}
+              onChange={(e) => setEmbedUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onAddEmbed();
+                }
+              }}
+              placeholder="或粘贴 B 站 / YouTube 链接（自动转播放器）"
+              className={`${inputCls} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={onAddEmbed}
+              disabled={!embedUrl.trim()}
+              className="px-4 border border-border text-xs md:text-sm hover:bg-white hover:text-black transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-inherit shrink-0"
+            >
+              添加
+            </button>
+          </div>
+
+          {media.length > 0 && (
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mt-3 md:mt-4">
-              {images.map((img, index) => (
-                <div key={index} className="relative aspect-square border border-border overflow-hidden group">
-                  <img src={img} alt={`图片${index + 1}`} className="w-full h-full object-cover" />
+              {media.map((m, index) => (
+                <div key={index} className="relative aspect-square border border-border overflow-hidden group bg-black">
+                  {coverOfMedia(m) ? (
+                    <img src={coverOfMedia(m)} alt={`媒体${index + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-secondary/50 text-[10px]">
+                      外链
+                    </div>
+                  )}
                   {index === 0 && (
                     <span className="absolute top-1 left-1 bg-white text-black text-[8px] md:text-[10px] px-1.5 py-0.5">
                       封面
                     </span>
                   )}
+                  {m.type === "video" && (
+                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1">
+                      <Video size={9} />
+                      视频
+                    </span>
+                  )}
+                  {m.type === "embed" && (
+                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1">
+                      <ExternalLink size={9} />
+                      外链
+                    </span>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setImages(images.filter((_, i) => i !== index));
+                      setMedia(media.filter((_, i) => i !== index));
                     }}
                     className="absolute top-1 right-1 bg-black/70 p-1 hover:bg-red-600 transition-colors"
                   >

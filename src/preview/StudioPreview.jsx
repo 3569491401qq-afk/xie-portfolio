@@ -119,7 +119,7 @@ const PROJECTS = [
     slug: "food",
     title: "食品饮料与材质研究",
     label: "C4D + OCTANE",
-    desc: "软糖、贝壳等偏材质表现方向的练习与商拍，重点打磨半透胶质与天然肌理。",
+    desc: "软糖、薯片等休闲食品的材质表现与商拍，重点打磨半透胶质、微距肌理与高饱和配色。",
     tags: ["半透胶质", "程序化纹理"],
     cover: "/works/gummy-candy.jpg",
     to: "/work/gummy-candy",
@@ -128,8 +128,8 @@ const PROJECTS = [
     slug: "digital",
     title: "3C数码与运动装备",
     label: "BLENDER + CYCLES",
-    desc: "硬表面建模与产品渲染，用实物同机位比对验证还原度。",
-    tags: ["硬表面建模", "实拍比对"],
+    desc: "硬表面小物的结构还原与产品渲染，从倒角、比例到材质细节逐层控制。",
+    tags: ["硬表面建模", "细节还原"],
     cover: "/works/gamepad-retro.jpg",
     to: "/work/retro-gamepad",
   },
@@ -146,9 +146,9 @@ const PROJECTS = [
 
 /* 首页轮播：每张单独给裁切焦点，竖构图才不会切掉瓶盖 */
 const HERO = [
-  { src: "/works/perfume-coco.jpg", pos: "50% 52%", t: "COCO 香水 · 岩石静物", s: "Blender + Cycles" },
-  { src: "/works/blue-perfume-01.jpg", pos: "50% 30%", t: "蓝色香氛瓶 · 水波光影", s: "Blender + Cycles" },
-  { src: "/works/prop-weapon.jpg", pos: "50% 50%", t: "枪械道具 · 电影感布光", s: "Blender + Cycles" },
+  { src: "/works/perfume-coco.jpg", pos: "50% 52%", t: "COCO 香水 · 岩石静物", s: "美妆个护" },
+  { src: "/works/blue-perfume-01.jpg", pos: "50% 30%", t: "蓝色香氛瓶 · 水波光影", s: "美妆个护" },
+  { src: "/works/prop-weapon.jpg", pos: "50% 50%", t: "枪械道具 · 电影感布光", s: "硬表面与场景" },
 ];
 
 /* ---------------- 图标（内联，不引图标库） ---------------- */
@@ -681,22 +681,11 @@ function Featured() {
 
 function WorksGrid({ works, showFilter = true, limit }) {
   const [cat, setCat] = useState("全部");
-  const [renderer, setRenderer] = useState(null);
   const [tag, setTag] = useState(null);
 
   const cats = useMemo(() => {
     const set = new Set((works || []).map((w) => w.category).filter(Boolean));
     return ["全部", ...set];
-  }, [works]);
-
-  // 渲染器/软件分组：来自 detail.category，分组清晰，客户经常按这个找
-  const renderers = useMemo(() => {
-    const freq = new Map();
-    (works || []).forEach((w) => {
-      const r = w.detail?.category;
-      if (r) freq.set(r, (freq.get(r) || 0) + 1);
-    });
-    return [...freq.entries()].sort((a, b) => b[1] - a[1]);
   }, [works]);
 
   // 材质族（由标签关键词推导），只保留真的有 2 件以上作品的
@@ -713,18 +702,16 @@ function WorksGrid({ works, showFilter = true, limit }) {
 
   const list = useMemo(() => {
     let arr = (works || []).filter((w) => cat === "全部" || w.category === cat);
-    if (renderer) arr = arr.filter((w) => w.detail?.category === renderer);
     if (tag) arr = arr.filter((w) => familiesOf(w).includes(tag));
     return typeof limit === "number" ? arr.slice(0, limit) : arr;
-  }, [works, cat, renderer, tag, limit]);
+  }, [works, cat, tag, limit]);
 
   const count = (c) =>
     c === "全部" ? (works || []).length : (works || []).filter((w) => w.category === c).length;
 
-  const filtered = cat !== "全部" || renderer || tag;
+  const filtered = cat !== "全部" || tag;
   const clearAll = () => {
     setCat("全部");
-    setRenderer(null);
     setTag(null);
   };
 
@@ -740,24 +727,6 @@ function WorksGrid({ works, showFilter = true, limit }) {
               </button>
             ))}
           </div>
-
-          {renderers.length > 1 && (
-            <div className="tagbar">
-              <span className="tagbar-label">按渲染器</span>
-              <button className={`tagchip${!renderer ? " is-active" : ""}`} onClick={() => setRenderer(null)}>
-                全部
-              </button>
-              {renderers.map(([r, n]) => (
-                <button
-                  key={r}
-                  className={`tagchip${renderer === r ? " is-active" : ""}`}
-                  onClick={() => setRenderer(renderer === r ? null : r)}
-                >
-                  {r} <span className="chip-n">{n}</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           {families.length > 1 && (
             <div className="tagbar">
