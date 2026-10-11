@@ -390,7 +390,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ---------- 板块 ---------- */
 
+/* 固定导航高 74px，滚动定位要留出这段距离，否则标题会被导航压住 */
 .section { padding: clamp(72px, 10vw, 150px) 0; border-top: 1px solid var(--line); }
+section[id] { scroll-margin-top: 92px; }
 .section-flush { padding-top: 0; border-top: 0; }
 
 .sec-head {

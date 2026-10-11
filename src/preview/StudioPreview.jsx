@@ -241,16 +241,53 @@ function useWorks() {
   return works;
 }
 
+/* ---------------- 单页内跳转 ---------------- */
+
+/**
+ * 注意：这里不能用 <a href="#about">。
+ * 预览页用的是 HashRouter，#about 会被当成路由 /about，
+ * 结果跳到「作品不存在」页 —— 锚点和 hash 路由是冲突的。
+ * 所以统一改成 JS 滚动。
+ */
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    return true;
+  }
+  return false;
+}
+
+/** 导航用：当前页找不到该板块（比如在详情页），先回首页再滚过去 */
+function useGoToSection() {
+  const navigate = useNavigate();
+  return (id) => {
+    if (scrollToId(id)) return;
+    navigate("/");
+    setTimeout(() => scrollToId(id), 140);
+  };
+}
+
 /* ---------------- 顶部导航 ---------------- */
 
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const goTo = useGoToSection();
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const links = [
+    { id: "featured", label: "精选" },
+    { id: "works", label: "作品" },
+    { id: "about", label: "关于" },
+    { id: "caps", label: "能力" },
+    { id: "contact", label: "联系" },
+  ];
 
   return (
     <header className={`nav${scrolled ? " is-scrolled" : ""}`}>
@@ -264,14 +301,16 @@ function Nav() {
         </Link>
 
         <nav className="nav-links" aria-label="主导航">
-          <a className="nav-link" href="#works">作品</a>
-          <a className="nav-link" href="#about">关于</a>
-          <a className="nav-link" href="#caps">能力</a>
-          <a className="nav-link" href="#contact">联系</a>
-          <Link className="nav-auth" to="/works">
+          {links.map((l) => (
+            <button key={l.id} className="nav-link" onClick={() => goTo(l.id)}>
+              {l.label}
+            </button>
+          ))}
+          {/* 作者中心是主站的路由，这里用整页跳转过去 */}
+          <a className="nav-auth" href="/admin">
             <IcGear />
             作者中心
-          </Link>
+          </a>
         </nav>
       </div>
     </header>
@@ -314,10 +353,10 @@ function Hero() {
 
         <Enter delay={0.18}>
           <div className="hero-cta">
-            <a className="btn btn-accent" href="#works">
+            <button className="btn btn-accent" onClick={() => scrollToId("works")}>
               查看作品
               <span className="btn-arrow"><IcArrow /></span>
-            </a>
+            </button>
             <a className="btn btn-ghost" href={`mailto:${PROFILE.email}`}>
               联系我
               <IcUpRight />
