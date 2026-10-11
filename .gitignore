@@ -12,6 +12,22 @@ dist
 dist-ssr
 *.local
 
+# 工程源文件与原始成片的暂存区（体积很大，不进仓库、不进打包）
+# 这里的图由 scripts/optimize-images.py 压缩后输出到 public/works/，
+# 而 public/works/ 是入库的 —— 所以克隆下来就能直接构建部署，不需要这些原始图。
+# 需要重新导出更大尺寸时，原始文件仍在各自的项目目录里（桌面/下载等）。
+assets-src/
+
+# 3D 软件与渲染工程文件
+*.blend
+*.blend1
+*.blend.bak
+*.exr
+*.hdr
+*.psd
+*.c4d
+*.orbx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

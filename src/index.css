@@ -2,13 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap');
-
+/* 字体说明：
+   原来这里用 @import 拉 Google Fonts 的 Inter，有两个问题——
+   1) @import 出现在 @tailwind 之后，PostCSS 会把整条规则判为无效，生产构建里根本不会生效；
+   2) fonts.googleapis.com 在国内网络环境下不可达，是会阻塞渲染的外部请求。
+   所以改为纯系统字体栈：Mac 走苹方/SF Pro，Windows 走微软雅黑，观感几乎一致且零请求。
+   如果确实要 Inter，把它下载到 public/fonts/ 自托管，再用 @font-face 引入。 */
 body {
   background-color: #050505;
   color: #ffffff;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", "SF Pro Display", -apple-system, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar {

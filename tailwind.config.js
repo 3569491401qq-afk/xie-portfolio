@@ -15,7 +15,17 @@ export default {
         custom: "1700px",
       },
       fontFamily: {
-        sans: ['"Inter"', '"SF Pro Display"', "system-ui", "sans-serif"],
+        sans: [
+          '"Inter"',
+          '"SF Pro Display"',
+          "-apple-system",
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          '"Noto Sans SC"',
+          "system-ui",
+          "sans-serif",
+        ],
       },
     },
   },
