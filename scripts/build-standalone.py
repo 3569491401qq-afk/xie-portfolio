@@ -114,7 +114,7 @@ def main():
             return m.group(1) + uri + m.group(1)
 
         # 路径在压缩后的代码里可能是双引号、单引号或模板字符串（反引号）
-        js = re.sub(r"([\"'`])(/works/[A-Za-z0-9._\-]+)\1", repl, js)
+        js = re.sub(r"([\"'`])(/works/[A-Za-z0-9._\-]+\.(?:jpg|jpeg|png|webp))\1", repl, js)
         # 关键：先把相对引用的兄弟 chunk 内联掉，否则 file:// 下模块加载失败。
         # 基准目录必须是被引用文件自己所在的目录（通常是 dist/assets/），不是 dist/。
         js = inline_relative_chunks(js, os.path.dirname(path))
@@ -137,7 +137,7 @@ def main():
             n_json_img += 1
             return m.group(1) + uri + m.group(1)
 
-        data = re.sub(r"([\"'])(/works/[A-Za-z0-9._\-]+)\1", repl_json, data)
+        data = re.sub(r"([\"'])(/works/[A-Za-z0-9._\-]+\.(?:jpg|jpeg|png|webp))\1", repl_json, data)
         html = html.replace(
             "</head>",
             f"<script>window.__WORKS_JSON__ = {data};</script>\n</head>",

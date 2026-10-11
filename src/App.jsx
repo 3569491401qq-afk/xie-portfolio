@@ -22,6 +22,12 @@ import {
   publishWorks,
   compressImageFile,
   getBackend,
+  mediaOf,
+  coverOf,
+  isVideoFile,
+  readAsDataUrl,
+  makeVideoPoster,
+  toEmbedUrl,
 } from "./worksStore.js";
 
 // --- 错误边界组件 ---
@@ -1058,7 +1064,7 @@ function AdminPage() {
                   <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-3 md:mb-4 relative">
                     {work.image ? (
                       <img
-                        src={work.image}
+                        src={coverOf(work)}
                         alt={work.title}
                         loading="lazy"
                         style={{ objectPosition: work.imagePos || "50% 50%" }}
@@ -1316,6 +1322,7 @@ function AdminWorkPage() {
   const [busy, setBusy] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [embedUrl, setEmbedUrl] = useState("");
   const fileInputRef = useRef(null);
   const loadedIdRef = useRef(null);
 
@@ -1350,31 +1357,81 @@ function AdminWorkPage() {
     setDirty(true);
   }, []);
 
-  /** 所有图片改动都走这里：第一张自动成为封面 */
-  const mutateImages = useCallback((updater) => {
+  /**
+   * 所有媒体改动都走这里，并同步回兼容字段：
+   *   detail.images —— 只放图片（主站老代码还在读它）
+   *   image         —— 卡片封面；第一个是视频时用它的封面帧
+   * media 支持三种：图片 / 站内视频 / 外链播放器
+   */
+  const mutateMedia = useCallback((updater) => {
     setDraft((d) => {
-      const cur = d.detail?.images || [];
-      const next = updater(cur).filter(Boolean);
-      return { ...d, image: next[0] || "", detail: { ...d.detail, images: next } };
+      const next = updater(mediaOf(d)).filter((m) => m && m.src);
+      const imgs = next.filter((m) => m.type === "image").map((m) => m.src);
+      const first = next[0];
+      let cover = imgs[0] || "";
+      if (first && first.type === "image") cover = first.src;
+      else if (first && first.type === "video") cover = first.poster || imgs[0] || "";
+      return {
+        ...d,
+        image: cover,
+        detail: { ...(d.detail || {}), media: next, images: imgs },
+      };
     });
     setDirty(true);
   }, []);
 
+  /** 添加外链播放器：B 站分享链接会自动转成 player 地址 */
+  const addEmbed = useCallback(() => {
+    const u = toEmbedUrl(embedUrl);
+    if (!u) return;
+    mutateMedia((cur) => [...cur, { type: "embed", src: u }]);
+    setEmbedUrl("");
+  }, [embedUrl, mutateMedia]);
+
   const addFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
-    setBusy(`正在处理 ${files.length} 张图片…`);
-    const urls = [];
-    for (const f of files) {
+    const all = Array.from(fileList || []);
+    const imgs = all.filter((f) => f.type.startsWith("image/"));
+    const vids = all.filter((f) => isVideoFile(f));
+    if (!imgs.length && !vids.length) return;
+
+    const added = [];
+    const warns = [];
+    const total = imgs.length + vids.length;
+    let step = 0;
+    const tick = (name) => {
+      step += 1;
+      setBusy(`处理中 ${step}/${total}：${name}`);
+    };
+
+    for (const f of imgs) {
+      tick(f.name || "图片");
       try {
-        urls.push(await compressImageFile(f));
+        added.push({ type: "image", src: await compressImageFile(f) });
       } catch (e) {
         console.warn("图片处理失败：", e);
       }
     }
-    mutateImages((cur) => [...cur, ...urls]);
-    setBusy("");
-  }, [mutateImages]);
+
+    for (const f of vids) {
+      tick(f.name || "视频");
+      const mb = f.size / 1048576;
+      if (mb > 40) {
+        warns.push(`「${f.name}」有 ${mb.toFixed(0)}MB，太大没加 —— 建议先压到 10MB 以内`);
+        continue;
+      }
+      try {
+        const src = await readAsDataUrl(f);
+        const poster = await makeVideoPoster(f);
+        added.push({ type: "video", src, poster: poster || undefined, name: f.name });
+      } catch (e) {
+        console.warn("视频处理失败：", e);
+        warns.push(`「${f.name}」读取失败`);
+      }
+    }
+
+    if (added.length) mutateMedia((cur) => [...cur, ...added]);
+    setBusy(warns.join("；"));
+  }, [mutateMedia]);
 
   // 页面任意位置 Ctrl+V 粘图
   useEffect(() => {
@@ -1422,7 +1479,7 @@ function AdminWorkPage() {
     );
   }
 
-  const images = draft.detail?.images || [];
+  const media = mediaOf(draft);
   const categories = deriveCategories(works);
 
   const handleDeleteWork = async () => {
@@ -1432,7 +1489,7 @@ function AdminWorkPage() {
   };
 
   const moveImage = (index, delta) => {
-    mutateImages((cur) => {
+    mutateMedia((cur) => {
       const target = index + delta;
       if (target < 0 || target >= cur.length) return cur;
       const next = [...cur];
@@ -1482,10 +1539,15 @@ function AdminWorkPage() {
           {/* 左：图片 */}
           <div className="lg:col-span-7">
             <div className="mb-5 md:mb-6">
-              <h2 className="text-lg md:text-xl font-bold mb-1">作品图片</h2>
+              <h2 className="text-lg md:text-xl font-bold mb-1">作品素材</h2>
               <p className="text-secondary text-xs md:text-sm">
-                共 {images.length} 张 · <b className="text-primary">第一张是封面</b>
-                ，列表、首页都用它。可以拖动排序，也可以点箭头调整。
+                共 {media.length} 个 · 其中图片 {media.filter((m) => m.type === "image").length} 张
+                {media.some((m) => m.type === "video") &&
+                  `、视频 ${media.filter((m) => m.type === "video").length} 段`}
+                {media.some((m) => m.type === "embed") &&
+                  `、外链 ${media.filter((m) => m.type === "embed").length} 个`}
+                · <b className="text-primary">第一位是封面</b>，列表和首页都用它。
+                可以点箭头调整顺序。
               </p>
             </div>
 
@@ -1508,34 +1570,75 @@ function AdminWorkPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 onChange={(e) => addFiles(e.target.files)}
                 className="hidden"
               />
               <Upload size={20} className="mx-auto mb-2 text-secondary" />
               <p className="text-secondary text-xs md:text-sm mb-1">
-                添加图片：点击选择、拖进来，或直接 Ctrl+V 粘贴
+                添加图片或视频：点击选择、拖进来，或直接 Ctrl+V 粘贴图片
               </p>
               <p className="text-[10px] md:text-xs text-secondary/60">
-                支持一次选多张，会自动压到 1800px 以内
+                图片自动压到 1800px 以内；视频请先压到 10MB 以内（浏览器端不压视频）
               </p>
             </div>
 
-            {images.length === 0 ? (
+            <div className="mb-5 md:mb-6">
+              <label className="block text-xs md:text-sm text-secondary mb-1.5 md:mb-2">
+                或者贴一个视频链接（B 站 / YouTube）
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={embedUrl}
+                  onChange={(e) => setEmbedUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addEmbed();
+                    }
+                  }}
+                  placeholder="https://www.bilibili.com/video/BVxxxxxxxxx"
+                  className={inputCls}
+                />
+                <button
+                  onClick={addEmbed}
+                  className="px-4 border border-border text-secondary hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap text-xs md:text-sm"
+                >
+                  添加
+                </button>
+              </div>
+              <p className="text-[10px] md:text-xs text-secondary/60 mt-1.5">
+                长视频建议走这条：B 站负责转码和分发，不占仓库体积
+              </p>
+            </div>
+
+            {media.length === 0 ? (
               <div className="border border-border bg-surface/30 py-14 text-center text-secondary text-sm">
-                还没有图片，先加一张吧
+                还没有素材，先加一张图或一段视频吧
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-                {images.map((src, i) => (
+                {media.map((m, i) => (
                   <div key={i} className="group relative border border-border bg-black">
                     <div className="aspect-square overflow-hidden">
-                      <img
-                        src={src}
-                        alt={`${draft.title} - ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                      {m.type === "image" && (
+                        <img src={m.src} alt={`${draft.title} - ${i + 1}`} className="w-full h-full object-cover" />
+                      )}
+                      {m.type === "video" &&
+                        (m.poster ? (
+                          <img src={m.poster} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full grid place-items-center text-secondary text-xs">视频</div>
+                        ))}
+                      {m.type === "embed" && (
+                        <div className="w-full h-full grid place-items-center text-secondary text-xs px-3 text-center">
+                          外链视频
+                          <br />
+                          <span className="text-[10px] text-secondary/50 break-all">{m.src.slice(0, 34)}…</span>
+                        </div>
+                      )}
                     </div>
 
                     {i === 0 && (
@@ -1544,8 +1647,13 @@ function AdminWorkPage() {
                         封面
                       </span>
                     )}
+                    {m.type !== "image" && (
+                      <span className="absolute bottom-12 left-2 bg-black/75 text-white text-[9px] px-1.5 py-0.5">
+                        {m.type === "video" ? "视频" : "外链"}
+                      </span>
+                    )}
                     <span className="absolute top-2 right-2 bg-black/70 text-white text-[9px] md:text-[10px] px-1.5 py-0.5">
-                      {i + 1}/{images.length}
+                      {i + 1}/{media.length}
                     </span>
 
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 flex items-center justify-between gap-1">
@@ -1560,7 +1668,7 @@ function AdminWorkPage() {
                         </button>
                         <button
                           onClick={() => moveImage(i, 1)}
-                          disabled={i === images.length - 1}
+                          disabled={i === media.length - 1}
                           title="后移"
                           className="p-1.5 bg-black/60 border border-white/15 text-white disabled:opacity-25 hover:bg-black/90 transition-colors"
                         >
@@ -1570,7 +1678,7 @@ function AdminWorkPage() {
                       <div className="flex gap-1">
                         {i !== 0 && (
                           <button
-                            onClick={() => mutateImages((cur) => [cur[i], ...cur.filter((_, k) => k !== i)])}
+                            onClick={() => mutateMedia((cur) => [cur[i], ...cur.filter((_, k) => k !== i)])}
                             title="设为封面"
                             className="px-2 py-1.5 bg-black/60 border border-white/15 text-white text-[10px] hover:bg-black/90 transition-colors"
                           >
@@ -1579,8 +1687,8 @@ function AdminWorkPage() {
                         )}
                         <button
                           onClick={() => {
-                            if (window.confirm(`删除第 ${i + 1} 张图片？`)) {
-                              mutateImages((cur) => cur.filter((_, k) => k !== i));
+                            if (window.confirm(`删除第 ${i + 1} 个素材？`)) {
+                              mutateMedia((cur) => cur.filter((_, k) => k !== i));
                             }
                           }}
                           title="删除这张"
@@ -1621,6 +1729,11 @@ function AdminWorkPage() {
                   onChange={(e) => patch({ category: e.target.value })}
                   className={inputCls}
                 />
+                <datalist id="admin-category-list">
+                  {categories.filter((c) => c !== "全部").map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </Field>
 
               <Field label="简短描述">
@@ -2236,7 +2349,7 @@ function PortfolioPage() {
                 >
                   <div className="aspect-[4/3] overflow-hidden bg-black border border-border mb-3 md:mb-4 relative">
                     <img
-                      src={work.image}
+                      src={coverOf(work)}
                       alt={work.title}
                       loading="lazy"
                       style={{ objectPosition: work.imagePos || "50% 50%" }}

@@ -50,6 +50,15 @@ IMAGE_MAP = [
     ("goggles-hero.png",        "goggles-hero.jpg"),       # 滑雪镜 · 白底主图
     ("goggles-front.png",       "goggles-front.jpg"),      # 滑雪镜 · 正面
     ("goggles-vs-real.png",     "goggles-vs-real.jpg"),    # 滑雪镜 · 渲染与实拍比对
+    # --- 场景（樱花街角微缩场景，日夜双版本）---
+    ("sakura-spring-01.png",    "sakura-spring-01.jpg"),
+    ("sakura-spring-02.png",    "sakura-spring-02.jpg"),
+    ("sakura-spring-03.png",    "sakura-spring-03.jpg"),
+    ("sakura-spring-04.png",    "sakura-spring-04.jpg"),
+    ("sakura-rain-01.png",      "sakura-rain-01.jpg"),
+    ("sakura-rain-02.png",      "sakura-rain-02.jpg"),
+    ("sakura-rain-03.png",      "sakura-rain-03.jpg"),
+    ("sakura-rain-04.png",      "sakura-rain-04.jpg"),
     # --- 硬表面与场景 ---
     ("2.png",                   "prop-weapon.jpg"),        # 枪械道具 · 静物场景
     ("weapon-neutral.png",      "weapon-neutral.jpg"),     # 枪械道具 · 中性底另一种构图

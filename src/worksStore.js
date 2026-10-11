@@ -360,20 +360,58 @@ export async function publishWorks(works, cfg, onProgress = () => {}) {
     return res.json();
   }
 
-  // 1. 抽出所有 base64 图片，替换成路径
+  // 1. 抽出所有 base64 资源（图片 + 视频 + 视频封面），替换成路径
   const next = clone(works);
   const jobs = [];
   for (const w of next) {
-    const imgs = w.detail?.images || [];
+    const detail = w.detail || {};
+
+    // 1a. 图片列表
+    const imgs = detail.images || [];
     for (let i = 0; i < imgs.length; i++) {
-      if (typeof imgs[i] !== "string" || !imgs[i].startsWith("data:")) continue;
+      if (!isDataUrl(imgs[i])) continue;
       const name = safeName(w.slug, w.id, i);
-      const dataUrl = imgs[i];
+      jobs.push({ path: `public/works/${name}`, dataUrl: imgs[i], name });
       imgs[i] = `/works/${name}`;
-      jobs.push({ path: `public/works/${name}`, dataUrl, name });
     }
-    // 封面永远跟随第一张
-    w.image = imgs[0] || "";
+
+    // 1b. media 里的视频与外链
+    if (Array.isArray(detail.media) && detail.media.length) {
+      for (let i = 0; i < detail.media.length; i++) {
+        const m = detail.media[i];
+        if (!m || !m.src) continue;
+        if (m.type === "image") {
+          if (isDataUrl(m.src)) {
+            const ext = extFromDataUrl(m.src);
+            const name = `${safeName(w.slug, w.id, i).replace(/\.jpg$/, "")}-img.${ext}`;
+            jobs.push({ path: `public/works/${name}`, dataUrl: m.src, name });
+            m.src = `/works/${name}`;
+          }
+        } else if (m.type === "video") {
+          if (isDataUrl(m.src)) {
+            const ext = extFromDataUrl(m.src);
+            const name = `${safeName(w.slug, w.id, i).replace(/\.jpg$/, "")}-v.${ext}`;
+            jobs.push({ path: `public/works/${name}`, dataUrl: m.src, name });
+            m.src = `/works/${name}`;
+          }
+          if (isDataUrl(m.poster)) {
+            const name = `${safeName(w.slug, w.id, i).replace(/\.jpg$/, "")}-poster.jpg`;
+            jobs.push({ path: `public/works/${name}`, dataUrl: m.poster, name });
+            m.poster = `/works/${name}`;
+          }
+        } else if (m.type === "embed") {
+          m.src = toEmbedUrl(m.src);
+        }
+      }
+    }
+
+    // 封面：优先第一个视频的封面，否则第一张图
+    const first = (detail.media || []).find((m) => m && m.src);
+    if (first && first.type === "video" && first.poster) {
+      w.image = first.poster;
+    } else {
+      w.image = imgs[0] || (first && first.type === "image" ? first.src : "") || "";
+    }
   }
 
   // 2. 逐张上传图片
@@ -395,6 +433,139 @@ export async function publishWorks(works, cfg, onProgress = () => {}) {
   setPublishedHash(hashStr(JSON.stringify(next)));
 
   return { ok: true, images: jobs.length, works: next.length };
+}
+
+/* ---------- 媒体（图片 / 视频 / 外链） ---------- */
+
+/**
+ * 媒体项统一成 { type, src, poster? }
+ *   image —— 站内图片
+ *   video —— 站内视频（发布时上传到 public/works/）
+ *   embed —— 外链播放器（B 站等）
+ *
+ * 兼容策略：老数据只有 detail.images。当作品里出现视频/外链时，才写入
+ * detail.media（完整有序列表）；没有 media 的就地按 images 推导。
+ * 这样旧数据、旧代码、主站都不受影响。
+ */
+export function mediaOf(work) {
+  const detail = work?.detail || {};
+  if (Array.isArray(detail.media) && detail.media.length) {
+    return detail.media.filter((m) => m && m.src);
+  }
+  return (detail.images || []).filter(Boolean).map((src) => ({ type: "image", src }));
+}
+
+/** data URL 的 mime 推扩展名 */
+export function extFromDataUrl(dataUrl) {
+  const m = /^data:([^;,]+)/.exec(dataUrl || "");
+  const mime = m ? m[1] : "";
+  if (mime.includes("webm")) return "webm";
+  if (mime.includes("quicktime") || mime.includes("mov")) return "mov";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("video")) return "mp4";
+  return "jpg";
+}
+
+/** 卡片封面：优先 work.image，其次第一个媒体（视频用它的封面） */
+export function coverOf(work) {
+  if (work?.image) return work.image;
+  const first = mediaOf(work)[0];
+  if (!first) return "";
+  if (first.type === "video") return first.poster || "";
+  if (first.type === "embed") return "";
+  return first.src;
+}
+
+export function isDataUrl(s) {
+  return typeof s === "string" && s.startsWith("data:");
+}
+
+export function isVideoFile(file) {
+  return Boolean(file && /^video\//.test(file.type));
+}
+
+/** 读成 data URL（视频也走这条路：Blob 不是 JSON 可序列化的，存不进草稿） */
+export function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error || new Error("文件读取失败"));
+    r.readAsDataURL(file);
+  });
+}
+
+/**
+ * 从视频里抽一帧当封面。没有封面的话，卡片和列表上会是黑块。
+ * @returns {Promise<string|null>} 封面 data URL
+ */
+export function makeVideoPoster(file, maxEdge = 1280) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    let done = false;
+
+    const finish = (val) => {
+      if (done) return;
+      done = true;
+      URL.revokeObjectURL(url);
+      resolve(val);
+    };
+
+    const draw = () => {
+      try {
+        const w0 = v.videoWidth || 0;
+        const h0 = v.videoHeight || 0;
+        if (!w0 || !h0) return null;
+        const scale = Math.min(1, maxEdge / Math.max(w0, h0));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w0 * scale));
+        c.height = Math.max(1, Math.round(h0 * scale));
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#0a0a0f";
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        return c.toDataURL("image/jpeg", 0.82);
+      } catch {
+        return null;
+      }
+    };
+
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = "auto";
+
+    v.onloadeddata = () => {
+      // 目标是第 1 秒（避开淡入黑帧），但**不能只靠 seeked** ——
+      // 有些环境里 seek 不会触发事件，必须有个兜底。
+      try {
+        v.currentTime = Math.min(1, (v.duration || 1) * 0.1);
+      } catch {
+        /* 忽略，走下面的兜底 */
+      }
+      setTimeout(() => finish(draw()), 900);
+    };
+    // 跳转成功就立刻用这一帧（比首帧更有代表性）
+    v.onseeked = () => finish(draw());
+    v.onerror = () => finish(null);
+    // 彻底兜底：无论如何别让调用方一直等
+    setTimeout(() => finish(null), 5000);
+
+    v.src = url;
+  });
+}
+
+/** 外链转播放器地址：B 站分享链接 → player.bilibili.com */
+export function toEmbedUrl(url) {
+  const raw = (url || "").trim();
+  if (!raw) return "";
+  const bv = /(BV[0-9A-Za-z]+)/.exec(raw);
+  if (bv) {
+    return `https://player.bilibili.com/player.html?bvid=${bv[1]}&autoplay=0&high_quality=1`;
+  }
+  const yt = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{6,})/.exec(raw);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  return raw;
 }
 
 /* ---------- 图片压缩 ---------- */

@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
+import { mediaOf, coverOf } from "../worksStore.js";
 
 /* ---------------- 资料（与主站 PROFILE 保持一致） ---------------- */
 
@@ -75,6 +76,9 @@ const MATERIAL_FAMILIES = [
   { label: "材质研究", keys: ["材质", "肌理", "程序化", "纹理"] },
   { label: "白底与纯色", keys: ["白底", "纯色", "商拍"] },
   { label: "微距与构图", keys: ["微距", "构图", "抽象", "单色"] },
+  // 注意：不要把「拆解」放进来 —— 手柄作品的标签是「产品拆解」，那是静图，
+  // 会误匹配成动画类。等以后真的有两段以上动画，「动画与动态」会自动出现。
+  { label: "动画与动态", keys: ["动画", "动态", "环绕", "旋转展示"] },
 ];
 
 /** 判断一件作品属于哪些材质族 */
@@ -485,6 +489,42 @@ function Hero() {
   );
 }
 
+/* ---------------- 媒体渲染（图片 / 视频 / 外链） ---------------- */
+
+/**
+ * 一个组件处理三种媒体。
+ * 外链用 iframe，按 16:9 撑开；视频用原生控件（浏览器自带全屏和画中画）。
+ */
+function MediaView({ item, title, className = "" }) {
+  if (!item) return null;
+  if (item.type === "video") {
+    return (
+      <video
+        className={className}
+        src={item.src}
+        poster={item.poster || undefined}
+        controls
+        playsInline
+        preload="metadata"
+      />
+    );
+  }
+  if (item.type === "embed") {
+    return (
+      <div className={`embed-box ${className}`}>
+        <iframe
+          src={item.src}
+          title={title || "视频"}
+          allowFullScreen
+          allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+          frameBorder="0"
+        />
+      </div>
+    );
+  }
+  return <img className={className} src={item.src} alt={title || ""} />;
+}
+
 /* ---------------- 作品灯箱 ---------------- */
 
 function Lightbox({ images, index, title, onClose, onIndex }) {
@@ -739,7 +779,7 @@ function WorksGrid({ works, showFilter = true, limit }) {
               <Link className="card" to={`/work/${w.slug}`}>
                 <div className="card-media">
                   <img
-                    src={w.image}
+                    src={coverOf(w)}
                     alt={w.title}
                     loading="lazy"
                     /* 竖构图作品必须给裁切焦点，否则 4:3 会切掉瓶盖 */
@@ -1011,15 +1051,36 @@ function Home() {
 function WorkDetail() {
   const { slug } = useParams();
   const works = useWorks();
-  const [active, setActive] = useState(null);
   const [zoom, setZoom] = useState(null);   // 灯箱打开时存的是图片下标
 
   const work = (works || []).find((w) => w.slug === slug);
-  const images = work?.detail?.images || [];
+  // 统一的媒体列表（图片 / 视频 / 外链）；老数据只有 images 会自动推导
+  const media = useMemo(() => (work ? mediaOf(work) : []), [work]);
+  // 灯箱只翻图片，视频和外链用页面上的原生播放器
+  const images = useMemo(
+    () => media.filter((m) => m.type === "image").map((m) => m.src),
+    [media]
+  );
+  const [mi, setMi] = useState(0);   // 当前媒体下标
 
   useEffect(() => {
-    if (work) setActive(work.detail?.images?.[0] || null);
-  }, [work]);
+    setMi(0);
+    setZoom(null);
+  }, [slug]);
+
+  const current = media[Math.min(mi, Math.max(0, media.length - 1))];
+  const isImage = current?.type === "image";
+  const imageIdx = isImage ? images.indexOf(current.src) : -1;
+
+  const metaCount = (() => {
+    const n = { image: 0, video: 0, embed: 0 };
+    media.forEach((m) => { n[m.type] = (n[m.type] || 0) + 1; });
+    const parts = [];
+    if (n.image) parts.push(`${n.image} 张图`);
+    if (n.video) parts.push(`${n.video} 段视频`);
+    if (n.embed) parts.push(`${n.embed} 个视频外链`);
+    return parts.join(" · ");
+  })();
 
   if (!works) {
     return (
@@ -1073,7 +1134,7 @@ function WorkDetail() {
           </Link>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center", margin: "28px 0 14px" }}>
             <span className="mono mono-accent">{detail.category || work.category}</span>
-            <span className="mono">{images.length} 张图</span>
+            <span className="mono">{metaCount}</span>
           </div>
           <h1 className="h1" style={{ maxWidth: "20ch" }}>{detail.title || work.title}</h1>
         </div>
@@ -1081,28 +1142,50 @@ function WorkDetail() {
 
       <div className="wrap">
         <Reveal>
-          <button
-            className="stage"
-            onClick={() => setZoom(Math.max(0, images.indexOf(active)))}
-            aria-label="放大查看这张图"
-          >
-            {active && <img src={active} alt={detail.title || work.title} />}
-            <span className="stage-hint">点击放大</span>
-          </button>
+          <div className="stage-wrap">
+            {current?.type === "image" && (
+              <button
+                className="stage"
+                onClick={() => setZoom(imageIdx >= 0 ? imageIdx : 0)}
+                aria-label="放大查看这张图"
+              >
+                <img src={current.src} alt={detail.title || work.title} />
+                <span className="stage-hint">点击放大</span>
+              </button>
+            )}
+            {current?.type === "video" && (
+              <div className="stage stage-video">
+                <MediaView item={current} title={detail.title || work.title} className="stage-media" />
+              </div>
+            )}
+            {current?.type === "embed" && (
+              <MediaView item={current} title={detail.title || work.title} />
+            )}
+          </div>
         </Reveal>
       </div>
 
-      {images.length > 1 && (
+      {media.length > 1 && (
         <div className="wrap" style={{ marginTop: 16 }}>
           <div className="thumbs">
-            {images.map((img, k) => (
+            {media.map((m, k) => (
               <button
                 key={k}
-                className={`thumb${active === img ? " is-active" : ""}`}
-                onClick={() => setActive(img)}
-                aria-label={`查看第 ${k + 1} 张`}
+                className={`thumb${k === mi ? " is-active" : ""}`}
+                onClick={() => setMi(k)}
+                aria-label={`查看第 ${k + 1} 个`}
               >
-                <img src={img} alt="" loading="lazy" />
+                {m.type === "image" && <img src={m.src} alt="" loading="lazy" />}
+                {m.type === "video" &&
+                  (m.poster ? (
+                    <img src={m.poster} alt="" loading="lazy" />
+                  ) : (
+                    <span className="thumb-ph" />
+                  ))}
+                {m.type === "embed" && <span className="thumb-ph thumb-ph-t">外链</span>}
+                {m.type !== "image" && (
+                  <span className="thumb-badge">{m.type === "video" ? "▶" : "↗"}</span>
+                )}
               </button>
             ))}
           </div>
@@ -1172,7 +1255,7 @@ function WorkDetail() {
                 <Reveal key={w.id} delay={0.05 * k}>
                   <Link className="card" to={`/work/${w.slug}`}>
                     <div className="card-media">
-                      <img src={w.image} alt={w.title} loading="lazy"
+                      <img src={coverOf(w)} alt={w.title} loading="lazy"
                            style={{ objectPosition: w.imagePos || "50% 50%" }} />
                     </div>
                     <div className="card-foot">
