@@ -218,13 +218,57 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .nav-auth:hover { border-color: var(--line-strong); color: var(--ink); }
 
+/* ---------- 窄屏菜单：链接收进按钮 + 下拉面板 ---------- */
+.nav-burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  margin-left: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+}
+.nav-burger span {
+  display: block;
+  height: 1px;
+  background: var(--ink-2);
+  transition: transform 0.3s var(--ease);
+}
+.nav-burger span.is-x:first-child { transform: translateY(3.5px) rotate(45deg); }
+.nav-burger span.is-x:last-child { transform: translateY(-3.5px) rotate(-45deg); }
+.nav-menu {
+  display: none;
+  flex-direction: column;
+  padding: 6px var(--gut) 16px;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 12, 15, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.nav-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 15px;
+  color: var(--ink-2);
+  text-align: left;
+}
+.nav-menu-link:last-child { border-bottom: 0; }
+.nav-menu-auth { color: var(--accent); }
+
 /* ---------- 首屏 ---------- */
 
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
-  min-height: 100vh;
-  min-height: 100svh;
+  /* 不占满整屏：留出一点下一屏的边，页面显得更紧凑、有往下滚的提示 */
+  min-height: 92vh;
+  min-height: 92svh;
   border-bottom: 1px solid var(--line);
 }
 
@@ -315,10 +359,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   pointer-events: none;
 }
 
-/* 画面右上角的编号（等宽字体，工作室感的关键一笔） */
+/* 画面右下角的编号（等宽字体，工作室感的关键一笔）。
+   放右下角而不是右上角：右上角和顶部导航同一水平线，会叠在导航上。 */
 .hero-index {
   position: absolute;
-  top: 22px;
+  bottom: 24px;
   right: 24px;
   z-index: 2;
   display: flex;
@@ -391,18 +436,27 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- 板块 ---------- */
 
 /* 固定导航高 74px，滚动定位要留出这段距离，否则标题会被导航压住 */
-.section { padding: clamp(72px, 10vw, 150px) 0; border-top: 1px solid var(--line); }
+.section { padding: clamp(56px, 7.5vw, 108px) 0; border-top: 1px solid var(--line); }
 section[id] { scroll-margin-top: 92px; }
 .section-flush { padding-top: 0; border-top: 0; }
 
 .sec-head {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: clamp(14px, 2vw, 26px);
   margin-bottom: clamp(34px, 5vw, 60px);
 }
 .sec-num { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--accent); }
+/* 板块中文标题：和导航用同一套词，滚到哪个板块都能对上号 */
+.sec-title {
+  margin: 0;
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  white-space: nowrap;
+}
 .sec-rule { height: 1px; background: var(--line); }
 .sec-note { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-3); text-align: right; }
 
@@ -555,6 +609,9 @@ section[id] { scroll-margin-top: 92px; }
 .caps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 22px); }
 /* 服务范围 6 项，3 列两行看着最舒服 */
 .services { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 22px); }
+/* 同一行卡片等高：外层是动效包裹层，让它拉伸、内层卡片撑满 */
+.services > * { display: flex; }
+.services .cap { flex: 1; width: 100%; }
 .cap {
   padding: clamp(20px, 2.2vw, 28px);
   border: 1px solid var(--line);
@@ -617,9 +674,13 @@ section[id] { scroll-margin-top: 92px; }
 /* ---------- 详情页 ---------- */
 
 .detail-hero { padding: calc(74px + clamp(28px, 4vw, 60px)) 0 clamp(24px, 3vw, 40px); }
+/* 主图框跟着图片比例收：竖构图不再左右留两大条黑边。
+   做法是先按高度定图，框宽收缩到图宽；横图够宽时自然撑满。 */
+.stage-wrap { display: flex; justify-content: center; }
 .stage {
   position: relative;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   border-radius: var(--r-panel);
   border: 1px solid var(--line);
   background:
@@ -628,11 +689,10 @@ section[id] { scroll-margin-top: 92px; }
   overflow: hidden;
   display: grid;
   place-items: center;
-  min-height: min(72vh, 720px);
 }
-.stage img { max-width: 100%; max-height: min(72vh, 720px); object-fit: contain; }
-/* 视频用原生控件，不需要放大提示 */
-.stage-video { cursor: default; }
+.stage img { width: auto; max-width: 100%; height: min(78vh, 860px); object-fit: contain; }
+/* 视频用原生控件，不需要放大提示；视频是横的，框保持撑满 */
+.stage-video { cursor: default; width: 100%; min-height: min(72vh, 720px); }
 .stage-media { max-width: 100%; max-height: min(72vh, 720px); display: block; }
 /* 外链播放器：按 16:9 撑开 */
 .embed-box {
@@ -715,17 +775,17 @@ section[id] { scroll-margin-top: 92px; }
   .feat-media { aspect-ratio: 4 / 3; }
   .trio { grid-template-columns: minmax(0, 1fr); }
   .nav-inner { height: 62px; }
-  .nav-links { gap: 0; }
-  .nav-link { padding: 8px 10px; font-size: 13px; }
-  .nav-link::after { left: 10px; right: 10px; }
-  .nav-auth { display: none; }
+  /* 窄屏：一行排不下六个链接，收进菜单按钮 */
+  .nav-links { display: none; }
+  .nav-burger { display: flex; }
+  .nav-menu { display: flex; }
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .stage img, .stage { max-height: 62vh; min-height: 0; }
+  .stage img { height: 58vh; }
+  .stage, .stage-video { min-height: 0; }
   /* 手机上 hover 不存在，常显「查看」按钮改成只留标题 */
   .card-go { display: none; }
-  .sec-head { grid-template-columns: auto minmax(0, 1fr); }
+  .sec-head { grid-template-columns: auto auto minmax(0, 1fr); }
   .sec-note { display: none; }
-  .nav-link.is-minor { display: none; }
   .pager { grid-template-columns: minmax(0, 1fr); }
   .pager-item.is-next { text-align: left; align-items: flex-start; }
 }

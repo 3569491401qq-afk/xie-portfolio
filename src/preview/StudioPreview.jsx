@@ -356,6 +356,7 @@ function useGoToSection() {
 
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
   const goTo = useGoToSection();
 
   useEffect(() => {
@@ -374,10 +375,16 @@ function Nav() {
     { id: "contact", label: "联系" },
   ];
 
+  // 窄屏下链接收进菜单面板，点完即收
+  const go = (id) => {
+    setOpen(false);
+    goTo(id);
+  };
+
   return (
     <header className={`nav${scrolled ? " is-scrolled" : ""}`}>
       <div className="wrap nav-inner">
-        <Link to="/" className="brand" aria-label="回到首页">
+        <Link to="/" className="brand" aria-label="回到首页" onClick={() => setOpen(false)}>
           <span className="brand-mark" aria-hidden="true">{PROFILE.mark}</span>
           <span className="brand-text">
             <span className="brand-name">{PROFILE.name}</span>
@@ -390,7 +397,7 @@ function Nav() {
             <button
               key={l.id}
               className={`nav-link${l.minor ? " is-minor" : ""}`}
-              onClick={() => goTo(l.id)}
+              onClick={() => go(l.id)}
             >
               {l.label}
             </button>
@@ -401,7 +408,31 @@ function Nav() {
             作者中心
           </a>
         </nav>
+
+        <button
+          className="nav-burger"
+          aria-label={open ? "收起菜单" : "展开菜单"}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className={open ? "is-x" : ""} />
+          <span className={open ? "is-x" : ""} />
+        </button>
       </div>
+
+      {open && (
+        <div className="nav-menu">
+          {links.map((l) => (
+            <button key={l.id} className="nav-menu-link" onClick={() => go(l.id)}>
+              {l.label}
+            </button>
+          ))}
+          <a className="nav-menu-link nav-menu-auth" href="/admin">
+            <IcGear />
+            作者中心
+          </a>
+        </div>
+      )}
     </header>
   );
 }
@@ -476,7 +507,19 @@ function Hero() {
       <div className="hero-stage">
         {HERO.map((h, k) => (
           <div className={`hero-slide${k === i ? " is-active" : ""}`} key={h.src} aria-hidden={k !== i}>
-            <img src={h.src} alt={k === i ? h.t : ""} style={{ objectPosition: h.pos }} />
+            <img
+              src={h.src}
+              alt={k === i ? h.t : ""}
+              style={{ objectPosition: h.pos }}
+              fetchPriority={k === 0 ? "high" : "low"}
+            />
+            {/* 作品名跟着画面一起淡入淡出，避免换图瞬间名字和画面对不上 */}
+            <div className="hero-caption">
+              <div>
+                <div className="hero-caption-t">{h.t}</div>
+                <div className="hero-caption-s">{h.s}</div>
+              </div>
+            </div>
           </div>
         ))}
         <div className="hero-index">
@@ -493,12 +536,6 @@ function Hero() {
               />
             ))}
           </span>
-        </div>
-        <div className="hero-caption">
-          <div>
-            <div className="hero-caption-t">{HERO[i].t}</div>
-            <div className="hero-caption-s">{HERO[i].s}</div>
-          </div>
         </div>
       </div>
     </section>
@@ -613,9 +650,11 @@ function Lightbox({ images, index, title, onClose, onIndex }) {
 function SecHead({ num, title, note }) {
   return (
     <div className="sec-head">
-      <span className="sec-num">{num}</span>
+      {num ? <span className="sec-num">{num}</span> : null}
+      {/* 中文标题必须渲染出来：导航锚点叫什么，页面里就要能找到什么 */}
+      {title ? <h2 className="sec-title">{title}</h2> : null}
       <span className="sec-rule" />
-      <span className="sec-note">{note}</span>
+      {note ? <span className="sec-note">{note}</span> : null}
     </div>
   );
 }
