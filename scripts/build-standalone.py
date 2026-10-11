@@ -11,9 +11,12 @@ import base64
 import mimetypes
 import os
 import re
+import subprocess
 import sys
 
-DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "dist")
+# 单文件版必须先把站点打包成「自包含 IIFE 单文件」（见 vite.standalone.config.js），
+# 否则产物里会有 `import ... from './worksStore.js'` 这种静态引用，沙箱里直接黑屏。
+DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "dist-standalone")
 DIST = os.path.normpath(DIST)
 
 PREVIEW_DIR = os.path.normpath(
@@ -76,6 +79,20 @@ def inline_relative_chunks(js, base_dir, depth=0):
 
 
 def main():
+    # 1) 先用 IIFE 单文件配置构建，产出完全自包含的 dist（无 import 引用）
+    root = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+    node = os.environ.get("NODE") or "node"
+    cfg = os.path.join(root, "vite.standalone.config.js")
+    print(f"构建单文件版（IIFE）：vite build --config vite.standalone.config.js")
+    try:
+        subprocess.run(
+            [node, os.path.join(root, "node_modules", "vite", "bin", "vite.js"),
+             "build", "--config", cfg, "--logLevel", "warn"],
+            cwd=root, check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(f"vite 构建失败（退出码 {e.returncode}）")
+
     index_path = ENTRY
     if not os.path.exists(index_path):
         raise SystemExit(f"找不到 {index_path}，先跑 vite build")
@@ -118,7 +135,18 @@ def main():
         # 关键：先把相对引用的兄弟 chunk 内联掉，否则 file:// 下模块加载失败。
         # 基准目录必须是被引用文件自己所在的目录（通常是 dist/assets/），不是 dist/。
         js = inline_relative_chunks(js, os.path.dirname(path))
-        html = html.replace(tag, f'<script type="module">\n{js}\n</script>')
+        # ⚠️ 关键：必须输出成「普通脚本」而不是 `type="module"`。
+        # 预览面板的 iframe 是 sandbox 的（origin 为 opaque），浏览器会直接
+        # 拦掉模块脚本 → #root 永远是空的 → 看起来就是黑屏。
+        # 这个包本身没有任何 ESM 专有语法（无顶层 import/export、无 import.meta），
+        # 所以降级成经典脚本后功能完全一样，但在任何环境里都能跑。
+        # 但经典脚本不会延迟执行：如果它写在 <head> 或 #root 之前，
+        # createRoot(document.getElementById("root")) 会拿到 null →
+        # React 报 #299「Target container is not a DOM element」。
+        # 所以这里把 bundle 从原位置删除，统一挪到 </body> 之前，确保 DOM 已解析完。
+        new_tag = f'<script>\n{js}\n</script>'
+        html = html.replace(tag, "")          # 删掉原处的 <script src=...>
+        html = html.replace("</body>", new_tag + "\n</body>", 1)  # 追加到 body 末尾
         n_js += 1
 
     # --- 3. 注入线上数据（离线单文件没有 fetch 的能力，直接塞成全局变量）---
