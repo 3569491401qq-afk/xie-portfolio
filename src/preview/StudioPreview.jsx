@@ -19,16 +19,24 @@ const PROFILE = {
   role: "3D Artist",
   roleSub: "产品可视化 · 商业渲染",
   statement:
-    "把一支产品的材质、光线和质感，做成能直接上架的画面。专注美妆个护与消费品的产品可视化，从建模、材质到布光渲染一次交付。",
+    "把一支产品的材质、光线和质感，做成可以直接上架的画面。主攻美妆日化类产品可视化，客户以设计公司为主，从建模、材质到布光渲染一次交付。",
   tagline: "光影重构现实 · 极致视觉表达",
   email: "3569491401@qq.com",
   phone: "193 8854 5612",
+  wechat: "xshxsh5218",
   city: "中国",
-  // 把「20+ 交付项目」换成与作品集一致的口径，避免客户数出对不上
+  // 口径与事实一致：2025 年起自学，自由职业接单，累计十余单
   stats: [
     { value: "1.5+", label: "从业年限" },
-    { value: "11", label: "作品案例" },
+    { value: "十余单", label: "项目交付" },
     { value: "6", label: "精通软件" },
+  ],
+  // 「关于我」旁边的事实清单，一眼能看完的关键信息
+  facts: [
+    { k: "入行", v: "2025 年 · 自学" },
+    { k: "接单方式", v: "自由职业" },
+    { k: "客户来源", v: "设计公司" },
+    { k: "擅长品类", v: "美妆日化" },
   ],
 };
 
@@ -46,6 +54,48 @@ const PROCESS = [
   { n: "02", t: "建模与材质", d: "按实物比例搭建模型，还原结构、倒角与细节，再逐层调出玻璃、液体、金属等材质。" },
   { n: "03", t: "布光与渲染", d: "按商业摄影的思路布置光位与环境，输出多个角度与景别，并保证同一支产品的统一性。" },
   { n: "04", t: "交付与调整", d: "按平台规范导出交付，附分层文件；根据反馈做必要调整，直到画面能直接上架。" },
+];
+
+/**
+ * 材质族：把作者写的一堆具体标签归纳成少数几个可用的筛选维度。
+ *
+ * 为什么不直接改标签数据 —— 详情页上「琥珀香液」「硬光投影」这类具体描述是有质感的，
+ * 换成「布光与光影」就没了味道。所以这里只在**筛选层**做归纳，原始标签原样保留。
+ *
+ * 作用范围：作品的 tags + desc + title。以后加新作品时，
+ * 只要标签里用到下面这些关键词，就会自动归到对应的族里，不用改代码。
+ * 想调整分类，改这里的 keys 就行。
+ */
+const MATERIAL_FAMILIES = [
+  { label: "玻璃与通透", keys: ["玻璃", "通透", "折射", "反射", "厚壁", "器皿"] },
+  { label: "液体与半透", keys: ["半透", "胶质", "次表面", "液体", "焦散"] },
+  { label: "布光与光影", keys: ["光", "阴影", "投影", "背光", "轮廓"] },
+  { label: "场景与道具", keys: ["场景", "道具", "陈设", "构成"] },
+  { label: "硬表面与金属", keys: ["硬表面", "金属", "磨损", "锈", "拆解", "悬浮"] },
+  { label: "材质研究", keys: ["材质", "肌理", "程序化", "纹理"] },
+  { label: "白底与纯色", keys: ["白底", "纯色", "商拍"] },
+  { label: "微距与构图", keys: ["微距", "构图", "抽象", "单色"] },
+];
+
+/** 判断一件作品属于哪些材质族 */
+function familiesOf(work) {
+  const hay = [
+    ...(work.detail?.tags || []),
+    work.desc || "",
+    work.title || "",
+  ].join(" ");
+  return MATERIAL_FAMILIES.filter((f) => f.keys.some((k) => hay.includes(k))).map(
+    (f) => f.label
+  );
+}
+
+const SERVICES = [
+  { n: "01", t: "产品静物渲染", d: "按商业摄影的思路搭建产品静物，画面可以直接用于电商主图与详情页。" },
+  { n: "02", t: "场景搭建与布光", d: "环境、道具、光位全部手工搭建，用光线本身塑造质感，而不是靠后期修。" },
+  { n: "03", t: "白底主图", d: "干净的纯色与白底产品图，按平台规范导出，适合货架与搜索场景。" },
+  { n: "04", t: "电商详情页套图", d: "一次交付整套视觉：主图、场景图、细节特写，保证多图之间材质与色温统一。" },
+  { n: "05", t: "纯 3D 建模", d: "只要模型不要渲染也可以，交付可继续加工的工程文件。" },
+  { n: "06", t: "动画与动态", d: "360° 旋转展示、产品拆解动画、短广告动态，让静态产品动起来。" },
 ];
 
 const SOFTWARE = ["Blender", "Cinema 4D", "Octane", "Redshift", "Cycles", "Eevee", "Photoshop"];
@@ -300,7 +350,7 @@ function Nav() {
     { id: "works", label: "作品" },
     { id: "about", label: "关于" },
     { id: "process", label: "流程" },
-    { id: "caps", label: "能力" },
+    { id: "services", label: "服务" },
     { id: "contact", label: "联系" },
   ];
 
@@ -593,29 +643,22 @@ function WorksGrid({ works, showFilter = true, limit }) {
     return [...freq.entries()].sort((a, b) => b[1] - a[1]);
   }, [works]);
 
-  /**
-   * 材质/技法标签：只保留被 2 个以上作品用到的。
-   * 目前数据里 34 个标签有 32 个只出现一次，所以这行通常很短 ——
-   * 等标签整理得更统一之后，它会自动变长，不用改代码。
-   */
-  const materialTags = useMemo(() => {
+  // 材质族（由标签关键词推导），只保留真的有 2 件以上作品的
+  const families = useMemo(() => {
     const freq = new Map();
     (works || []).forEach((w) =>
-      (w.detail?.tags || []).forEach((t) => {
-        if (t) freq.set(t, (freq.get(t) || 0) + 1);
-      })
+      familiesOf(w).forEach((f) => freq.set(f, (freq.get(f) || 0) + 1))
     );
     return [...freq.entries()]
       .filter(([, n]) => n >= 2)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([t, n]) => ({ t, n }));
+      .map(([label, n]) => ({ label, n }));
   }, [works]);
 
   const list = useMemo(() => {
     let arr = (works || []).filter((w) => cat === "全部" || w.category === cat);
     if (renderer) arr = arr.filter((w) => w.detail?.category === renderer);
-    if (tag) arr = arr.filter((w) => (w.detail?.tags || []).includes(tag));
+    if (tag) arr = arr.filter((w) => familiesOf(w).includes(tag));
     return typeof limit === "number" ? arr.slice(0, limit) : arr;
   }, [works, cat, renderer, tag, limit]);
 
@@ -660,19 +703,19 @@ function WorksGrid({ works, showFilter = true, limit }) {
             </div>
           )}
 
-          {materialTags.length > 0 && (
+          {families.length > 1 && (
             <div className="tagbar">
               <span className="tagbar-label">按材质 / 技法</span>
               <button className={`tagchip${!tag ? " is-active" : ""}`} onClick={() => setTag(null)}>
                 全部
               </button>
-              {materialTags.map(({ t, n }) => (
+              {families.map(({ label, n }) => (
                 <button
-                  key={t}
-                  className={`tagchip${tag === t ? " is-active" : ""}`}
-                  onClick={() => setTag(tag === t ? null : t)}
+                  key={label}
+                  className={`tagchip${tag === label ? " is-active" : ""}`}
+                  onClick={() => setTag(tag === label ? null : label)}
                 >
-                  {t} <span className="chip-n">{n}</span>
+                  {label} <span className="chip-n">{n}</span>
                 </button>
               ))}
             </div>
@@ -747,20 +790,36 @@ function About() {
                   <span className="mono">Blender + Cycles</span>
                 </figcaption>
               </div>
+              <div className="kv" style={{ marginTop: 26 }}>
+                {PROFILE.facts.map((f) => (
+                  <div key={f.k}>
+                    <div className="kv-k">{f.k}</div>
+                    <div className="kv-v">{f.v}</div>
+                  </div>
+                ))}
+              </div>
             </figure>
           </Reveal>
 
           <Reveal delay={0.08}>
             <div className="about-col">
               <h3 className="h2">用渲染替代拍摄</h3>
+
               <p className="lede prose">
-                1.5 年经验的独立 3D 艺术家，深耕 3D 建模与渲染领域。精通 Cinema 4D 与 Blender
-                双软件工作流，熟练使用 Octane / Redshift / Cycles 等主流渲染器。
+                2025 年开始自学 3D，从零做到今天能独立交付整套产品视觉。目前以自由职业的方式
+                承接项目，客户主要来自设计公司，累计交付十余单，集中在美妆日化这个品类。
               </p>
+
               <p className="body-sm prose">
-                聚焦广告设计方向，擅长产品视觉化与场景构建。习惯从需求理解、建模、材质、布光一路做到
-                最终渲染交付的完整闭环；也提供整套电商视觉的批量交付，保证同一支产品在不同画面里
-                材质与色温始终统一。
+                我习惯从需求理解一路做到最终渲染：先弄清产品要投放在哪里、平台有什么规范、
+                参考风格是哪一种，再动手建模。真正的力气花在材质和布光上 —— 玻璃的通透厚度、
+                液体的次表面散射、金属上的磨损与油污，这些细节决定了画面是「像渲染」还是
+                「像拍出来的」。
+              </p>
+
+              <p className="body-sm prose">
+                美妆日化是我最熟的品类。香水、精华、精油这类产品对玻璃、液体和高光的还原要求最高，
+                也正是我最愿意反复磨的地方。如果你手上是这类产品，可以直接把实物图和参考发我聊聊。
               </p>
 
               <div className="stats">
@@ -771,6 +830,16 @@ function About() {
                   </div>
                 ))}
               </div>
+
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <a className="btn btn-accent" href={`mailto:${PROFILE.email}`}>
+                  发邮件聊聊
+                  <IcUpRight />
+                </a>
+                <button className="btn btn-ghost" onClick={() => scrollToId("works")}>
+                  先看作品
+                </button>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -779,16 +848,22 @@ function About() {
   );
 }
 
-/* ---------------- 能力与工具 ---------------- */
+/* ---------------- 服务范围 ---------------- */
 
-function Capabilities() {
+function Services() {
   return (
-    <section className="section" id="caps">
+    <section className="section" id="services">
       <div className="wrap">
-        <SecHead num="05" title="我能做什么" note="Capabilities" />
-        <div className="caps">
-          {CAPABILITIES.map((c, k) => (
-            <Reveal key={c.n} delay={0.05 * k}>
+        <SecHead num="04" title="服务范围" note="Services" />
+        <Reveal>
+          <p className="lede prose" style={{ marginBottom: "clamp(28px,3.4vw,44px)" }}>
+            从一张产品主图到整套详情页视觉，都可以交给我。只要模型不要渲染也行。
+          </p>
+        </Reveal>
+
+        <div className="services">
+          {SERVICES.map((c, k) => (
+            <Reveal key={c.n} delay={0.04 * k}>
               <div className="cap">
                 <span className="cap-n">{c.n}</span>
                 <h4 className="h3">{c.t}</h4>
@@ -800,10 +875,17 @@ function Capabilities() {
 
         <Reveal delay={0.1}>
           <div className="soft-row">
-            {SOFTWARE.map((s) => (
-              <span className="soft" key={s}>{s}</span>
+            <span className="tagbar-label" style={{ alignSelf: "center" }}>使用软件</span>
+            {SOFTWARE.map((sw) => (
+              <span className="soft" key={sw}>{sw}</span>
             ))}
           </div>
+        </Reveal>
+
+        <Reveal delay={0.14}>
+          <p className="mono" style={{ marginTop: 22, fontSize: 11 }}>
+            具体周期、修改轮次与交付格式按项目沟通确认
+          </p>
         </Reveal>
       </div>
     </section>
@@ -816,7 +898,7 @@ function Process() {
   return (
     <section className="section" id="process">
       <div className="wrap">
-        <SecHead num="04" title="合作流程" note="Process" />
+        <SecHead num="05" title="合作流程" note="Process" />
         <Reveal>
           <p className="lede prose" style={{ marginBottom: "clamp(28px,3.4vw,44px)" }}>
             从你把产品交给我，到画面能直接上架，中间大概是这样四步。
@@ -850,6 +932,9 @@ function Contact() {
             <div>
               <h3 className="h2" style={{ marginBottom: 18 }}>有产品想做成渲染图？</h3>
               <a className="contact-mail" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+              <p className="body-sm" style={{ marginTop: 16 }}>
+                或加微信 <span style={{ color: "var(--accent)", fontFamily: "var(--mono)" }}>{PROFILE.wechat}</span>
+              </p>
             </div>
           </Reveal>
           <Reveal delay={0.08}>
@@ -861,6 +946,10 @@ function Contact() {
               <div className="contact-row">
                 <span className="mono">Phone</span>
                 <span style={{ color: "var(--ink)" }}>{PROFILE.phone}</span>
+              </div>
+              <div className="contact-row">
+                <span className="mono">WeChat</span>
+                <span style={{ color: "var(--ink)" }}>{PROFILE.wechat}</span>
               </div>
               <div className="contact-row">
                 <span className="mono">Location</span>
@@ -910,8 +999,8 @@ function Home() {
       </section>
 
       <About />
+      <Services />
       <Process />
-      <Capabilities />
       <Contact />
     </>
   );

@@ -553,6 +553,8 @@ section[id] { scroll-margin-top: 92px; }
 /* ---------- 能力 ---------- */
 
 .caps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 22px); }
+/* 服务范围 6 项，3 列两行看着最舒服 */
+.services { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 22px); }
 .cap {
   padding: clamp(20px, 2.2vw, 28px);
   border: 1px solid var(--line);
@@ -670,6 +672,7 @@ section[id] { scroll-margin-top: 92px; }
 
 @media (max-width: 1080px) {
   .caps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .services { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-works { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .process { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .about { grid-template-columns: minmax(0, 1fr); }
@@ -706,6 +709,7 @@ section[id] { scroll-margin-top: 92px; }
 @media (max-width: 560px) {
   .grid-works { grid-template-columns: minmax(0, 1fr); gap: 26px; }
   .caps { grid-template-columns: minmax(0, 1fr); }
+  .services { grid-template-columns: minmax(0, 1fr); }
   .process { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .brand-role { display: none; }
   .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }

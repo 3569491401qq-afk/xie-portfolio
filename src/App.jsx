@@ -102,9 +102,10 @@ const PROFILE = {
     city: "China",
     portfolio: "#"
   },
+  // 口径按作者确认的实际情况：2025 年起自学、自由职业接单、累计十余单
   stats: [
     { label: "从业年限", value: "1.5+" },
-    { label: "交付项目", value: "20+" },
+    { label: "项目交付", value: "十余单" },
     { label: "精通软件", value: "6+" },
   ]
 };
