@@ -39,6 +39,15 @@ const CAPABILITIES = [
   { n: "04", t: "材质与质感表现", d: "玻璃、液体、金属、织物等材质攻坚，追求照片级的折射与反射。" },
 ];
 
+/* 工作流程：只描述「标准的产品可视化流程」这一行业通行做法，
+   不写具体周期、修改次数这类需要作者确认的数字。 */
+const PROCESS = [
+  { n: "01", t: "需求沟通", d: "确认产品实物或图纸、要投放的平台与规范、参考风格，以及最终需要的画面清单。" },
+  { n: "02", t: "建模与材质", d: "按实物比例搭建模型，还原结构、倒角与细节，再逐层调出玻璃、液体、金属等材质。" },
+  { n: "03", t: "布光与渲染", d: "按商业摄影的思路布置光位与环境，输出多个角度与景别，并保证同一支产品的统一性。" },
+  { n: "04", t: "交付与调整", d: "按平台规范导出交付，附分层文件；根据反馈做必要调整，直到画面能直接上架。" },
+];
+
 const SOFTWARE = ["Blender", "Cinema 4D", "Octane", "Redshift", "Cycles", "Eevee", "Photoshop"];
 
 /* 精选项目：封面一律用「裁切不伤产品」的那张，不用竖构图的极限特写 */
@@ -107,6 +116,11 @@ const IcGear = ({ s = 15 }) => (
       d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7"
       stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"
     />
+  </svg>
+);
+const IcClose = ({ s = 16 }) => (
+  <svg width={s} height={s} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 const IcBack = ({ s = 14 }) => (
@@ -282,9 +296,10 @@ function Nav() {
   }, []);
 
   const links = [
-    { id: "featured", label: "精选" },
+    { id: "featured", label: "精选", minor: true },
     { id: "works", label: "作品" },
     { id: "about", label: "关于" },
+    { id: "process", label: "流程" },
     { id: "caps", label: "能力" },
     { id: "contact", label: "联系" },
   ];
@@ -302,7 +317,11 @@ function Nav() {
 
         <nav className="nav-links" aria-label="主导航">
           {links.map((l) => (
-            <button key={l.id} className="nav-link" onClick={() => goTo(l.id)}>
+            <button
+              key={l.id}
+              className={`nav-link${l.minor ? " is-minor" : ""}`}
+              onClick={() => goTo(l.id)}
+            >
               {l.label}
             </button>
           ))}
@@ -374,6 +393,13 @@ function Hero() {
             ))}
           </div>
         </Enter>
+
+        <Enter delay={0.3}>
+          <span className="scroll-cue">
+            <span className="scroll-cue-line" />
+            <span className="scroll-cue-t">Scroll · 向下浏览作品</span>
+          </span>
+        </Enter>
       </div>
 
       {/* 右：作品画面，慢速轮播 + 极缓推近 */}
@@ -406,6 +432,73 @@ function Hero() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---------------- 作品灯箱 ---------------- */
+
+function Lightbox({ images, index, title, onClose, onIndex }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft") onIndex(index - 1);
+      else if (e.key === "ArrowRight") onIndex(index + 1);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [index, onClose, onIndex]);
+
+  if (!images || images.length === 0) return null;
+  const i = ((index % images.length) + images.length) % images.length;
+  const many = images.length > 1;
+  const stop = (e) => e.stopPropagation();
+
+  return (
+    <div className="lb" role="dialog" aria-modal="true" aria-label="作品大图" onClick={onClose}>
+      <div className="lb-bar is-top" onClick={stop}>
+        <div>
+          <div className="lb-title">{title}</div>
+          <div className="lb-count">
+            {String(i + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
+          </div>
+        </div>
+        <button className="lb-btn" onClick={onClose} aria-label="关闭"><IcClose /></button>
+      </div>
+
+      {many && (
+        <>
+          <button
+            className="lb-btn"
+            style={{ position: "absolute", left: "clamp(16px,3vw,44px)" }}
+            onClick={(e) => { stop(e); onIndex(i - 1); }}
+            aria-label="上一张"
+          >
+            <IcBack s={16} />
+          </button>
+          <button
+            className="lb-btn"
+            style={{ position: "absolute", right: "clamp(16px,3vw,44px)" }}
+            onClick={(e) => { stop(e); onIndex(i + 1); }}
+            aria-label="下一张"
+          >
+            <IcArrow s={16} />
+          </button>
+        </>
+      )}
+
+      <img className="lb-img" src={images[i]} alt={`${title} - ${i + 1}`} onClick={stop} />
+
+      {many && (
+        <div className="lb-bar is-bottom" onClick={stop}>
+          <span className="lb-count">← → 切换 · ESC 关闭</span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -482,65 +575,156 @@ function Featured() {
 
 function WorksGrid({ works, showFilter = true, limit }) {
   const [cat, setCat] = useState("全部");
+  const [renderer, setRenderer] = useState(null);
+  const [tag, setTag] = useState(null);
+
   const cats = useMemo(() => {
     const set = new Set((works || []).map((w) => w.category).filter(Boolean));
     return ["全部", ...set];
   }, [works]);
 
-  const list = useMemo(() => {
-    const arr = (works || []).filter((w) => cat === "全部" || w.category === cat);
-    return typeof limit === "number" ? arr.slice(0, limit) : arr;
-  }, [works, cat, limit]);
+  // 渲染器/软件分组：来自 detail.category，分组清晰，客户经常按这个找
+  const renderers = useMemo(() => {
+    const freq = new Map();
+    (works || []).forEach((w) => {
+      const r = w.detail?.category;
+      if (r) freq.set(r, (freq.get(r) || 0) + 1);
+    });
+    return [...freq.entries()].sort((a, b) => b[1] - a[1]);
+  }, [works]);
 
-  const count = (c) => (c === "全部" ? (works || []).length : (works || []).filter((w) => w.category === c).length);
+  /**
+   * 材质/技法标签：只保留被 2 个以上作品用到的。
+   * 目前数据里 34 个标签有 32 个只出现一次，所以这行通常很短 ——
+   * 等标签整理得更统一之后，它会自动变长，不用改代码。
+   */
+  const materialTags = useMemo(() => {
+    const freq = new Map();
+    (works || []).forEach((w) =>
+      (w.detail?.tags || []).forEach((t) => {
+        if (t) freq.set(t, (freq.get(t) || 0) + 1);
+      })
+    );
+    return [...freq.entries()]
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([t, n]) => ({ t, n }));
+  }, [works]);
+
+  const list = useMemo(() => {
+    let arr = (works || []).filter((w) => cat === "全部" || w.category === cat);
+    if (renderer) arr = arr.filter((w) => w.detail?.category === renderer);
+    if (tag) arr = arr.filter((w) => (w.detail?.tags || []).includes(tag));
+    return typeof limit === "number" ? arr.slice(0, limit) : arr;
+  }, [works, cat, renderer, tag, limit]);
+
+  const count = (c) =>
+    c === "全部" ? (works || []).length : (works || []).filter((w) => w.category === c).length;
+
+  const filtered = cat !== "全部" || renderer || tag;
+  const clearAll = () => {
+    setCat("全部");
+    setRenderer(null);
+    setTag(null);
+  };
 
   return (
     <>
       {showFilter && (
-        <div className="filters">
-          {cats.map((c) => (
-            <button
-              key={c}
-              className={`chip${c === cat ? " is-active" : ""}`}
-              onClick={() => setCat(c)}
-            >
-              {c}
-              <span className="chip-n">{count(c)}</span>
+        <>
+          <div className="filters">
+            {cats.map((c) => (
+              <button key={c} className={`chip${c === cat ? " is-active" : ""}`} onClick={() => setCat(c)}>
+                {c}
+                <span className="chip-n">{count(c)}</span>
+              </button>
+            ))}
+          </div>
+
+          {renderers.length > 1 && (
+            <div className="tagbar">
+              <span className="tagbar-label">按渲染器</span>
+              <button className={`tagchip${!renderer ? " is-active" : ""}`} onClick={() => setRenderer(null)}>
+                全部
+              </button>
+              {renderers.map(([r, n]) => (
+                <button
+                  key={r}
+                  className={`tagchip${renderer === r ? " is-active" : ""}`}
+                  onClick={() => setRenderer(renderer === r ? null : r)}
+                >
+                  {r} <span className="chip-n">{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {materialTags.length > 0 && (
+            <div className="tagbar">
+              <span className="tagbar-label">按材质 / 技法</span>
+              <button className={`tagchip${!tag ? " is-active" : ""}`} onClick={() => setTag(null)}>
+                全部
+              </button>
+              {materialTags.map(({ t, n }) => (
+                <button
+                  key={t}
+                  className={`tagchip${tag === t ? " is-active" : ""}`}
+                  onClick={() => setTag(tag === t ? null : t)}
+                >
+                  {t} <span className="chip-n">{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {list.length === 0 ? (
+        <p className="body-sm" style={{ padding: "48px 0" }}>
+          这个条件下暂时没有作品。
+          {filtered && (
+            <button className="alink" style={{ marginLeft: 12, borderBottom: 0 }} onClick={clearAll}>
+              清除筛选
             </button>
+          )}
+        </p>
+      ) : (
+        <div className="grid-works">
+          {list.map((w, k) => (
+            <Reveal key={w.slug || w.id} delay={Math.min(k * 0.05, 0.25)}>
+              <Link className="card" to={`/work/${w.slug}`}>
+                <div className="card-media">
+                  <img
+                    src={w.image}
+                    alt={w.title}
+                    loading="lazy"
+                    /* 竖构图作品必须给裁切焦点，否则 4:3 会切掉瓶盖 */
+                    style={{ objectPosition: w.imagePos || "50% 50%" }}
+                  />
+                  <span className="card-chip">{w.category}</span>
+                  <span className="card-go">
+                    View
+                    <IcArrow s={11} />
+                  </span>
+                </div>
+                <div className="card-foot">
+                  <span className="card-idx">{String(k + 1).padStart(2, "0")}</span>
+                  <span className="card-title">{w.title}</span>
+                </div>
+                <p className="card-desc">{w.desc}</p>
+              </Link>
+            </Reveal>
           ))}
         </div>
       )}
 
-      <div className="grid-works">
-        {list.map((w, k) => (
-          <Reveal key={w.slug || w.id} delay={Math.min(k * 0.05, 0.25)}>
-            <Link className="card" to={`/work/${w.slug}`}>
-              <div className="card-media">
-                <img
-                  src={w.image}
-                  alt={w.title}
-                  loading="lazy"
-                  /* 竖构图作品必须给裁切焦点，否则 4:3 会切掉瓶盖 */
-                  style={{ objectPosition: w.imagePos || "50% 50%" }}
-                />
-                <span className="card-chip">{w.category}</span>
-                <span className="card-go">
-                  View
-                  <IcArrow s={11} />
-                </span>
-              </div>
-              <div className="card-foot">
-                <span className="card-idx">{String(k + 1).padStart(2, "0")}</span>
-                <span className="card-title">{w.title}</span>
-              </div>
-              <p className="card-desc">{w.desc}</p>
-            </Link>
-          </Reveal>
-        ))}
-      </div>
-
-      {list.length === 0 && (
-        <p className="body-sm" style={{ padding: "48px 0" }}>这个分类下暂时没有作品。</p>
+      {filtered && list.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <button className="alink" onClick={clearAll}>
+            清除筛选
+          </button>
+        </div>
       )}
     </>
   );
@@ -601,7 +785,7 @@ function Capabilities() {
   return (
     <section className="section" id="caps">
       <div className="wrap">
-        <SecHead num="04" title="我能做什么" note="Capabilities" />
+        <SecHead num="05" title="我能做什么" note="Capabilities" />
         <div className="caps">
           {CAPABILITIES.map((c, k) => (
             <Reveal key={c.n} delay={0.05 * k}>
@@ -626,13 +810,41 @@ function Capabilities() {
   );
 }
 
+/* ---------------- 合作流程 ---------------- */
+
+function Process() {
+  return (
+    <section className="section" id="process">
+      <div className="wrap">
+        <SecHead num="04" title="合作流程" note="Process" />
+        <Reveal>
+          <p className="lede prose" style={{ marginBottom: "clamp(28px,3.4vw,44px)" }}>
+            从你把产品交给我，到画面能直接上架，中间大概是这样四步。
+          </p>
+        </Reveal>
+        <div className="process">
+          {PROCESS.map((p, k) => (
+            <Reveal key={p.n} delay={0.05 * k}>
+              <div className="step">
+                <span className="step-n">{p.n}</span>
+                <h4 className="step-t">{p.t}</h4>
+                <p className="step-d">{p.d}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ---------------- 联系与页脚 ---------------- */
 
 function Contact() {
   return (
     <section className="section" id="contact">
       <div className="wrap">
-        <SecHead num="05" title="聊一聊" note="Contact" />
+        <SecHead num="06" title="聊一聊" note="Contact" />
         <div className="contact">
           <Reveal>
             <div>
@@ -698,6 +910,7 @@ function Home() {
       </section>
 
       <About />
+      <Process />
       <Capabilities />
       <Contact />
     </>
@@ -710,6 +923,7 @@ function WorkDetail() {
   const { slug } = useParams();
   const works = useWorks();
   const [active, setActive] = useState(null);
+  const [zoom, setZoom] = useState(null);   // 灯箱打开时存的是图片下标
 
   const work = (works || []).find((w) => w.slug === slug);
   const images = work?.detail?.images || [];
@@ -745,9 +959,23 @@ function WorkDetail() {
   const tags = detail.tags || [];
   const related = (works || []).filter((w) => w.category === work.category && w.id !== work.id).slice(0, 3);
 
+  // 上一件/下一件按作品集顺序走，方便连续浏览
+  const idx = (works || []).findIndex((w) => w.id === work.id);
+  const prev = idx > 0 ? works[idx - 1] : null;
+  const next = idx >= 0 && idx < works.length - 1 ? works[idx + 1] : null;
+
   return (
     <>
       <Nav />
+      {zoom !== null && (
+        <Lightbox
+          images={images}
+          index={zoom}
+          title={detail.title || work.title}
+          onClose={() => setZoom(null)}
+          onIndex={setZoom}
+        />
+      )}
       <div className="detail-hero">
         <div className="wrap">
           <Link className="alink" to="/" style={{ borderBottom: 0, paddingBottom: 0 }}>
@@ -764,9 +992,14 @@ function WorkDetail() {
 
       <div className="wrap">
         <Reveal>
-          <div className="stage">
+          <button
+            className="stage"
+            onClick={() => setZoom(Math.max(0, images.indexOf(active)))}
+            aria-label="放大查看这张图"
+          >
             {active && <img src={active} alt={detail.title || work.title} />}
-          </div>
+            <span className="stage-hint">点击放大</span>
+          </button>
         </Reveal>
       </div>
 
@@ -815,6 +1048,29 @@ function WorkDetail() {
               </div>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="pager">
+            {prev ? (
+              <Link className="pager-item" to={`/work/${prev.slug}`}>
+                <span className="pager-k">← 上一件</span>
+                <span className="pager-t">{prev.title}</span>
+              </Link>
+            ) : (
+              <span className="pager-item pager-empty" aria-hidden="true" />
+            )}
+            {next ? (
+              <Link className="pager-item is-next" to={`/work/${next.slug}`}>
+                <span className="pager-k">下一件 →</span>
+                <span className="pager-t">{next.title}</span>
+              </Link>
+            ) : (
+              <span className="pager-item pager-empty" aria-hidden="true" />
+            )}
+          </div>
         </div>
       </section>
 
