@@ -73,7 +73,7 @@
     "id": 4,
     "title": "蓝色香氛瓶 · 水波光影",
     "category": "美妆个护",
-    "image": "/works/blue-perfume-01.jpg",
+    "image": "/works/blue-perfume-02.jpg",
     "imagePos": "50% 14%",
     "desc": "水波承托 · 冷调背光 · 倒影控制",
     "slug": "blue-perfume",
@@ -88,40 +88,7 @@
         "布光迭代"
       ],
       "images": [
-        "/works/blue-perfume-01.jpg",
-        "/works/blue-perfume-02.jpg",
-        "/works/blue-perfume-03.jpg"
-      ]
-    }
-  },
-  {
-    "id": 5,
-    "title": "PARFUM 香氛商用交付套图",
-    "category": "美妆个护",
-    "image": "/works/parfum-a0.jpg",
-    "imagePos": "50% 14%",
-    "desc": "整套商用交付 · A/B 两版共 9 张",
-    "slug": "parfum-delivery",
-    "detail": {
-      "title": "PARFUM 香氛产品商用交付套图",
-      "category": "Blender + Cycles",
-      "description": "一次完整的电商商用交付：按平台规范输出 A、B 两套视觉，共 9 张——商品全景、场景主图、白底主图、渐变灰场景，以及标签、瓶盖、玻璃质感、液体焦散等特写。这一组的重点不在单张画面，而在于保证同一支产品在不同底色、不同景别、不同焦段下材质与色温始终统一。",
-      "tags": [
-        "商用交付",
-        "多图统一性",
-        "白底主图",
-        "材质特写"
-      ],
-      "images": [
-        "/works/parfum-a0.jpg",
-        "/works/parfum-a1.jpg",
-        "/works/parfum-a4.jpg",
-        "/works/parfum-a3.jpg",
-        "/works/parfum-a2.jpg",
-        "/works/parfum-b1.jpg",
-        "/works/parfum-b2.jpg",
-        "/works/parfum-b4.jpg",
-        "/works/parfum-b3.jpg"
+        "/works/blue-perfume-02.jpg"
       ]
     }
   },
@@ -152,7 +119,7 @@
     "title": "扇贝材质研究",
     "category": "食品饮料",
     "image": "/works/shell-study.jpg",
-    "desc": "贝壳肌理 · 色彩对比 · 微观细节",
+    "desc": "薯片 · 色彩对比 · 微观细节",
     "slug": "shell-study",
     "detail": {
       "title": "扇贝贝壳材质研究",
@@ -167,7 +134,8 @@
       "images": [
         "/works/shell-study.jpg"
       ]
-    }
+    },
+    "imagePos": "50% 50%"
   },
   {
     "id": 8,
@@ -188,30 +156,6 @@
       ],
       "images": [
         "/works/gamepad-retro.jpg"
-      ]
-    }
-  },
-  {
-    "id": 9,
-    "title": "滑雪镜产品渲染",
-    "category": "3C数码",
-    "image": "/works/goggles-hero.jpg",
-    "desc": "镜面镀膜 · 结构还原 · 与实拍比对",
-    "slug": "ski-goggles",
-    "detail": {
-      "title": "滑雪镜产品渲染与实拍比对",
-      "category": "Blender + Cycles",
-      "description": "按实物滑雪镜建模渲染，难点集中在镜片的虹彩镀膜——需要在同一张面上同时做出随视角偏移的渐变反射、透过镜片的高光灼烧感，以及镜框包胶与头带泡棉的哑光反差。最后一张是同机位渲染图与原物实拍的并置比对，用来验证镜片色相、镜框弧度和整体比例是否还原到位。",
-      "tags": [
-        "虹彩镀膜",
-        "视角依赖反射",
-        "实物还原",
-        "渲染实拍比对"
-      ],
-      "images": [
-        "/works/goggles-hero.jpg",
-        "/works/goggles-front.jpg",
-        "/works/goggles-vs-real.jpg"
       ]
     }
   },
