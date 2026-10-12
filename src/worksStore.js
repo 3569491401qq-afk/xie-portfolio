@@ -39,7 +39,18 @@ const PERSONS = {
   },
 };
 
+const LS_ACTIVE = "xie-portfolio:active-person";
+
+/**
+ * 当前管的是哪一位 —— 记在浏览器里。
+ * 不记的话：在后台切到俊勇、刷新页面或直接从作品编辑页进来，就又回到谢曙浩，
+ * 编辑页会显示「作品不存在」，看着像数据丢了。
+ */
 let activePerson = "hao";
+try {
+  const saved = typeof localStorage !== "undefined" && localStorage.getItem(LS_ACTIVE);
+  if (saved && PERSONS[saved]) activePerson = saved;
+} catch { /* 读不到就用默认 */ }
 
 /** 切到哪位作者。换人后必须重新 loadWorks。 */
 export function setActivePerson(key) {
@@ -48,6 +59,7 @@ export function setActivePerson(key) {
   activePerson = next;
   draftCache = null;
   publishedCache = null;
+  try { localStorage.setItem(LS_ACTIVE, next); } catch { /* 存不下不影响本次使用 */ }
   return activePerson;
 }
 

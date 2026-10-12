@@ -632,6 +632,156 @@ const FadeIn = ({ children, delay = 0 }) => (
   </motion.div>
 );
 
+/**
+ * 视频选帧做封面。
+ * 拖时间轴或按帧微调，停在哪儿就取哪儿当候选封面，确认后写回这段视频的 poster。
+ * 取图会缩到最长边 1600px 再压 JPEG，免得一张封面就吃掉几兆本地空间。
+ */
+function FramePicker({ src, poster, onPick, onClose }) {
+  const vRef = useRef(null);
+  const [dur, setDur] = useState(0);
+  const [t, setT] = useState(0);
+  const [shot, setShot] = useState("");
+  const [err, setErr] = useState("");
+
+  const fmt = (s) => {
+    if (!Number.isFinite(s)) return "0:00.00";
+    const m = Math.floor(s / 60);
+    const sec = s - m * 60;
+    return `${m}:${sec < 10 ? "0" : ""}${sec.toFixed(2)}`;
+  };
+
+  const grab = useCallback(() => {
+    const v = vRef.current;
+    if (!v || !v.videoWidth) return "";
+    const scale = Math.min(1, 1600 / v.videoWidth);
+    const c = document.createElement("canvas");
+    c.width = Math.round(v.videoWidth * scale);
+    c.height = Math.round(v.videoHeight * scale);
+    const g = c.getContext("2d");
+    g.drawImage(v, 0, 0, c.width, c.height);
+    try {
+      return c.toDataURL("image/jpeg", 0.86);
+    } catch {
+      setErr("这台浏览器不允许把这段视频导出成图（跨域限制）。可以先下载视频、本地截一帧，再用「添加图片」传进来。");
+      return "";
+    }
+  }, []);
+
+  const seek = useCallback((next) => {
+    const v = vRef.current;
+    if (!v) return;
+    const total = v.duration || 0;
+    v.currentTime = Math.max(0, Math.min(next, Math.max(0, total - 0.02)));
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const confirm = () => {
+    if (!shot) { setErr("还没取到画面 —— 先拖一下时间轴，或点「播放」让视频跑起来。"); return; }
+    onPick(shot);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-background border border-border w-full max-w-4xl max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border sticky top-0 bg-background">
+          <div>
+            <h2 className="text-base md:text-lg font-medium">选一帧做封面</h2>
+            <p className="text-[11px] text-secondary mt-0.5 break-all">
+              {typeof src === "string" && src.startsWith("data:") ? "本机视频（还没发布）" : src}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 text-secondary hover:text-white transition-colors" aria-label="关闭"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 grid md:grid-cols-[minmax(0,1fr)_220px] gap-5">
+          <div>
+            <div className="bg-black border border-border">
+              <video
+                ref={vRef}
+                src={src}
+                className="w-full max-h-[52vh] object-contain"
+                muted
+                playsInline
+                preload="auto"
+                onLoadedMetadata={(e) => { setDur(e.currentTarget.duration || 0); seek(0); }}
+                onSeeked={(e) => { setT(e.currentTarget.currentTime); setShot(grab()); }}
+                onError={() => setErr("这段视频读不出来。换个文件试试，或先确认它是完整的。")}
+              />
+            </div>
+
+            <div className="mt-3">
+              <input
+                type="range"
+                min={0}
+                max={dur || 0}
+                step={0.01}
+                value={t}
+                onChange={(e) => seek(Number(e.target.value))}
+                className="w-full accent-white"
+                aria-label="视频时间轴"
+              />
+              <div className="flex items-center justify-between text-[11px] text-secondary mt-1 font-mono">
+                <span>{fmt(t)}</span>
+                <span>{fmt(dur)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button onClick={() => seek(t - 1 / 30)} className="px-3 py-2 border border-border text-xs hover:bg-white/5">← 一帧</button>
+              <button onClick={() => seek(t + 1 / 30)} className="px-3 py-2 border border-border text-xs hover:bg-white/5">一帧 →</button>
+              <button onClick={() => seek(t - 0.5)} className="px-3 py-2 border border-border text-xs hover:bg-white/5">退 0.5 秒</button>
+              <button onClick={() => seek(t + 0.5)} className="px-3 py-2 border border-border text-xs hover:bg-white/5">进 0.5 秒</button>
+              <button
+                onClick={() => { const v = vRef.current; if (!v) return; if (v.paused) v.play(); else v.pause(); }}
+                className="px-3 py-2 border border-border text-xs hover:bg-white/5"
+              >
+                播放 / 暂停
+              </button>
+            </div>
+            <p className="text-[11px] text-secondary/70 mt-2 leading-relaxed">
+              拖时间轴或按帧微调，右侧会实时给出候选封面；确认前不改动任何数据。
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[11px] text-secondary mb-2">候选封面</p>
+            <div className="aspect-square bg-black border border-border overflow-hidden grid place-items-center">
+              {shot ? <img src={shot} alt="候选封面" className="w-full h-full object-cover" /> : <span className="text-secondary text-xs">还没取到</span>}
+            </div>
+            {poster && (
+              <>
+                <p className="text-[11px] text-secondary mt-4 mb-2">现在的封面</p>
+                <div className="aspect-square bg-black border border-border overflow-hidden">
+                  <img src={poster} alt="当前封面" className="w-full h-full object-cover" />
+                </div>
+              </>
+            )}
+            {err && <p className="text-[11px] text-red-400 mt-4 leading-relaxed">{err}</p>}
+            <button
+              onClick={confirm}
+              className="w-full mt-4 px-4 py-2.5 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              就用这一帧
+            </button>
+            <button onClick={onClose} className="w-full mt-2 px-4 py-2.5 border border-border text-secondary text-sm hover:text-white transition-colors">
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- 登录页面 ---
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -1289,6 +1439,8 @@ function AdminPage() {
 
 /* ---------- 新建作品弹窗 ---------- */
 function AddWorkModal({ newWork, setNewWork, media, setMedia, embedUrl, setEmbedUrl, onAddEmbed, onPick, onClose, onSubmit, categories, busy }) {
+  // 给第几个视频选封面帧（null = 窗口没开）
+  const [picking, setPicking] = useState(null);
   const fileInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   // 预览卡片封面：优先图片，其次视频封面；外链没有缩略图
@@ -1401,10 +1553,22 @@ function AddWorkModal({ newWork, setNewWork, media, setMedia, embedUrl, setEmbed
                     </span>
                   )}
                   {m.type === "video" && (
-                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1">
-                      <Video size={9} />
-                      视频
-                    </span>
+                    <>
+                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1">
+                        <Video size={9} />
+                        视频
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPicking(index);
+                        }}
+                        title="拖时间轴，任选一帧当这张视频的封面"
+                        className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 hover:bg-black transition-colors"
+                      >
+                        选帧
+                      </button>
+                    </>
                   )}
                   {m.type === "embed" && (
                     <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] md:text-[10px] px-1.5 py-0.5 inline-flex items-center gap-1">
@@ -1480,6 +1644,19 @@ function AddWorkModal({ newWork, setNewWork, media, setMedia, embedUrl, setEmbed
           </button>
         </div>
       </div>
+
+      {picking !== null && media[picking] && (
+        <FramePicker
+          src={media[picking].src}
+          poster={media[picking].poster}
+          onPick={(shot) => {
+            const idx = picking;
+            setMedia((cur) => cur.map((m, k) => (k === idx ? { ...m, poster: shot } : m)));
+            setPicking(null);
+          }}
+          onClose={() => setPicking(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1500,6 +1677,8 @@ function AdminWorkPage() {
   const [dragOver, setDragOver] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
+  // 正在给第几个视频选封面帧（null = 选帧窗口没开）
+  const [picking, setPicking] = useState(null);
   const fileInputRef = useRef(null);
   const loadedIdRef = useRef(null);
 
@@ -1640,11 +1819,23 @@ function AdminWorkPage() {
   }
 
   if (!work || !draft) {
+    const who = getActivePerson() === "yong" ? "谢俊勇" : "谢曙浩";
+    const other = getActivePerson() === "yong" ? "谢曙浩" : "谢俊勇";
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center">
           <h1 className="text-2xl md:text-3xl font-bold mb-4">找不到这个作品</h1>
-          <p className="text-secondary text-sm mb-8">它可能已经被删除了。</p>
+          <p className="text-secondary text-sm mb-2">它可能已经被删除了。</p>
+          <p className="text-secondary/70 text-xs mb-8">
+            也可能它属于另一位 —— 现在管的是「{who}」，
+            <button
+              onClick={() => { setActivePerson(getActivePerson() === "yong" ? "hao" : "yong"); navigate("/admin"); }}
+              className="underline hover:text-white mx-1"
+            >
+              切到「{other}」
+            </button>
+            再找。
+          </p>
           <button
             onClick={() => navigate("/admin")}
             className="px-6 py-3 bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors"
@@ -1853,6 +2044,15 @@ function AdminWorkPage() {
                         </button>
                       </div>
                       <div className="flex gap-1">
+                        {m.type === "video" && (
+                          <button
+                            onClick={() => setPicking(i)}
+                            title="拖时间轴，任选一帧当这张视频的封面"
+                            className="px-2 py-1.5 bg-black/60 border border-white/15 text-white text-[10px] hover:bg-black/90 transition-colors"
+                          >
+                            选帧
+                          </button>
+                        )}
                         {i !== 0 && (
                           <button
                             onClick={() => mutateMedia((cur) => [cur[i], ...cur.filter((_, k) => k !== i)])}
@@ -2072,6 +2272,19 @@ function AdminWorkPage() {
           </div>
         </div>
       </div>
+
+      {picking !== null && media[picking] && (
+        <FramePicker
+          src={media[picking].src}
+          poster={media[picking].poster}
+          onPick={(shot) => {
+            const idx = picking;
+            mutateMedia((cur) => cur.map((m, k) => (k === idx ? { ...m, poster: shot } : m)));
+            setPicking(null);
+          }}
+          onClose={() => setPicking(null)}
+        />
+      )}
 
       {busy && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-5 py-3 bg-white text-black text-xs md:text-sm font-medium shadow-lg">
