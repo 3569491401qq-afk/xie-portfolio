@@ -1018,3 +1018,48 @@ section[id] { scroll-margin-top: 92px; }
   border-bottom: 1px solid var(--line); transition: color .25s var(--ease), border-color .25s var(--ease);
 }
 .linklike:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- 视频兜底与灯箱补充 ---------- */
+
+.card-play {
+  position: absolute; left: 14px; bottom: 14px; z-index: 2;
+  padding: 5px 11px; border-radius: var(--r-pill);
+  background: rgba(6, 8, 10, 0.62); border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+}
+.stage-checking, .stage-fallback {
+  width: 100%; min-height: min(52vh, 460px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: clamp(22px, 3vw, 40px); text-align: center;
+  border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--surface-1);
+  color: var(--ink-3); font-size: 13px;
+}
+.stage-fallback { color: var(--ink-2); }
+.stage-poster { max-width: 100%; max-height: 46vh; border-radius: var(--r-panel); opacity: .9; }
+.stage-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+.stage-video { position: relative; }
+.stage-tap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; }
+.stage-note {
+  margin-top: 10px; font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.1em; color: var(--ink-3); text-align: center;
+}
+.lb-bar.is-bottom { justify-content: space-between; align-items: flex-end; gap: 18px; }
+.lb-desc {
+  font-size: 13px; line-height: 1.7; color: rgba(255, 255, 255, 0.66);
+  max-width: min(640px, 62vw); text-align: left;
+}
+@media (max-width: 700px) {
+  .lb-bar.is-bottom { flex-direction: column; align-items: stretch; }
+  .lb-desc { max-width: none; }
+  .lb-count { text-align: right; }
+}
+.gate-thumbs { display: flex; gap: 8px; margin-top: 16px; }
+.gate-thumb {
+  width: 33%; aspect-ratio: 4 / 3; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2);
+}
+.gate-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s var(--ease); }
+.gate:hover .gate-thumb img { transform: scale(1.06); }
+.gate-thumb.is-empty { opacity: .5; }

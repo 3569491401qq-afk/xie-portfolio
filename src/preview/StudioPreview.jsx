@@ -7,10 +7,10 @@
  *   - 样式全部在 preview.css 里，不复用主站的 Tailwind 类
  * 目的：让作者在不动主站的前提下，对比新视觉再决定要不要换。
  */
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
-import { mediaOf, coverOf, loadWorks, getCachedWorks, subscribe } from "../worksStore.js";
+import { mediaOf, coverOf, loadWorks, getCachedWorks, subscribe, setActivePerson } from "../worksStore.js";
 
 /* ---------------- 两位作者的资料 ----------------
    站点是同一套设计，「人」作为数据维度：
@@ -19,7 +19,7 @@ import { mediaOf, coverOf, loadWorks, getCachedWorks, subscribe } from "../works
 const HAO = {
   key: "hao",
   path: "/hao",
-  dataFile: null,            // null = 走 worksStore（作者中心可编辑、能发布）
+  dataFile: "/works.json",   // 线上那一份（门页只读它，不碰草稿）
   name: "谢曙浩",
   mark: "谢",
   badge: "浩",
@@ -351,33 +351,20 @@ function Reveal({ children, delay = 0, className = "" }) {
  * 所以这里不用再单独判断。
  */
 function useWorks(person) {
-  const [works, setWorks] = useState(() =>
-    person.dataFile ? null : getCachedWorks() || null
-  );
+  const [works, setWorks] = useState(null);
 
   useEffect(() => {
     let alive = true;
-
-    // 俊勇那份是静态 JSON，没有草稿、也不需要作者中心
-    if (person.dataFile) {
-      fetch(person.dataFile)
-        .then((r) => (r.ok ? r.json() : []))
-        .then((w) => alive && setWorks(Array.isArray(w) ? w : []))
-        .catch((e) => {
-          console.warn("作品数据载入失败：", person.dataFile, e);
-          if (alive) setWorks([]);
-        });
-      return () => { alive = false; };
-    }
-
-    // 没有草稿时传空数组兜底：worksStore 会优先用草稿/线上数据，
-    // 都拿不到才回退到这个空数组，不会让页面卡在「正在载入」。
+    // 数据层按人分草稿与线上文件，切人要先告诉它「现在是哪位」
+    setActivePerson(person.key);
+    setWorks(getCachedWorks());
+    // 空数组兜底：worksStore 会优先用草稿/线上数据，都拿不到才用它
     loadWorks([])
       .then((w) => {
         if (alive) setWorks(w);
       })
       .catch((e) => {
-        console.warn("作品数据载入失败：", e);
+        console.warn("作品数据载入失败：", person.key, e);
         if (alive) setWorks([]);
       });
     const unsubscribe = subscribe((w) => {
@@ -387,6 +374,35 @@ function useWorks(person) {
       alive = false;
       unsubscribe();
     };
+  }, [person.key]);
+
+  return works;
+}
+
+/**
+ * 只读线上那一份作品数据 —— 门页要同屏摆两位，不能用 worksStore：
+ * 那份是「当前激活的一位」的共享缓存，两个人一起读会串成同一个人的作品。
+ */
+const staticWorksCache = new Map();
+function useStaticWorks(person) {
+  const [works, setWorks] = useState(() => staticWorksCache.get(person.key) || null);
+
+  useEffect(() => {
+    const hit = staticWorksCache.get(person.key);
+    if (hit) { setWorks(hit); return; }
+    let alive = true;
+    fetch(person.dataFile)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((w) => {
+        const list = Array.isArray(w) ? w : [];
+        staticWorksCache.set(person.key, list);
+        if (alive) setWorks(list);
+      })
+      .catch((e) => {
+        console.warn("门页作品载入失败：", person.dataFile, e);
+        if (alive) setWorks([]);
+      });
+    return () => { alive = false; };
   }, [person.key, person.dataFile]);
 
   return works;
@@ -400,8 +416,31 @@ function useWorks(person) {
  * 结果跳到「作品不存在」页 —— 锚点和 hash 路由是冲突的。
  * 所以统一改成 JS 滚动。
  */
-function scrollToId(id) {
-  const el = document.getElementById(id);
+/**
+ * 每条路径写自己的标题与一句话简介。
+ * 不做这件事，搜索引擎看到的 /hao 和 /yong 说的是同一句话，等于两个页面互相抢排名。
+ */
+function usePageMeta(title, desc) {
+  useEffect(() => {
+    if (title) document.title = title;
+    if (!desc) return;
+    const set = (sel, attr, val) => {
+      const el = document.querySelector(sel);
+      if (el) el.setAttribute(attr, val);
+    };
+    let m = document.querySelector('meta[name="description"]');
+    if (!m) {
+      m = document.createElement("meta");
+      m.setAttribute("name", "description");
+      document.head.appendChild(m);
+    }
+    m.setAttribute("content", desc);
+    set('meta[property="og:description"]', "content", desc);
+    set('meta[name="twitter:description"]', "content", desc);
+  }, [title, desc]);
+}
+
+function scrollToId(id) {  const el = document.getElementById(id);
   if (el) {
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     return true;
@@ -620,22 +659,123 @@ function Hero({ works }) {
 /* ---------------- 媒体渲染（图片 / 视频 / 外链） ---------------- */
 
 /**
- * 一个组件处理三种媒体。
- * 外链用 iframe，按 16:9 撑开；视频用原生控件（浏览器自带全屏和画中画）。
+ * 视频能不能真的播，不能只挂 onerror —— 有些浏览器根本不触发它。
+ * 这里用一段隐藏 video 读 metadata，拿到时长才算可用（俊勇原站踩出来的做法）。
  */
-function MediaView({ item, title, className = "" }) {
-  if (!item) return null;
-  if (item.type === "video") {
+const videoProbeCache = new Map();
+function probeVideo(url) {
+  if (videoProbeCache.has(url)) return videoProbeCache.get(url);
+  const p = new Promise((resolve) => {
+    const v = document.createElement("video");
+    let settled = false;
+    const done = (ok) => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+    v.preload = "metadata";
+    v.muted = true;
+    v.playsInline = true;
+    v.onloadedmetadata = () => done((v.duration || 0) > 0);
+    v.onerror = () => done(false);
+    setTimeout(() => done(false), 5000);
+    v.src = url;
+  });
+  videoProbeCache.set(url, p);
+  return p;
+}
+
+/**
+ * 详情页的视频位。三层兜底：
+ *   探测失败 → 给封面 + 「下载」+「用系统播放器打开」，不留黑块
+ *   能播但被浏览器拦下自动播放（iOS 低电量/省流模式一律拦）→ 给一个手动播放按钮
+ *   正常 → 静音循环自动播
+ */
+function StageVideo({ item, className = "" }) {
+  const [state, setState] = useState("checking");   // checking | ok | blocked | failed
+  const ref = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    setState("checking");
+    probeVideo(item.src).then((ok) => alive && setState(ok ? "ok" : "failed"));
+    return () => { alive = false; };
+  }, [item.src]);
+
+  const tryPlay = useCallback(() => {
+    const v = ref.current;
+    if (!v) return;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => setState("blocked"));
+  }, []);
+
+  useEffect(() => {
+    if (state === "ok") tryPlay();
+  }, [state, tryPlay]);
+
+  if (state === "checking") {
+    return <div className={`stage stage-video stage-checking`}>正在确认视频能否播放…</div>;
+  }
+
+  if (state === "failed") {
     return (
+      <div className="stage stage-fallback">
+        {item.poster && <img className="stage-poster" src={item.poster} alt="" />}
+        <p className="body-sm" style={{ marginTop: 14 }}>
+          这台设备当前没能直接播放这段视频。
+          <br />
+          如果是「省流模式 / 低电量模式」，关掉后再点开一次通常就能播。
+        </p>
+        <div className="stage-links">
+          <a className="btn btn-accent" href={item.src} download>
+            下载视频{item.size ? `（${item.size}）` : ""}
+          </a>
+          <a className="btn btn-ghost" href={item.src} target="_blank" rel="noopener noreferrer">
+            用系统播放器打开
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stage stage-video">
       <video
+        ref={ref}
         className={className}
         src={item.src}
         poster={item.poster || undefined}
         controls
+        loop
+        muted
         playsInline
-        preload="metadata"
+        webkit-playsinline="true"
+        preload="auto"
+        onError={() => setState("failed")}
       />
-    );
+      {state === "blocked" && (
+        <button className="btn btn-accent stage-tap" onClick={tryPlay}>
+          点击播放动画
+        </button>
+      )}
+      {item.size && <p className="stage-note">视频 {item.size} · 静音自动循环</p>}
+    </div>
+  );
+}
+
+/** 一件作品里的第一段视频（卡片上标体积用） */
+function videoOf(work) {
+  return (mediaOf(work) || []).find((m) => m.type === "video") || null;
+}
+
+/**
+ * 一个组件处理三种媒体。
+ * 外链用 iframe，按 16:9 撑开；视频走 StageVideo 的兜底逻辑。
+ */
+function MediaView({ item, title, className = "" }) {
+  if (!item) return null;
+  if (item.type === "video") {
+    return <StageVideo item={item} className={className} />;
   }
   if (item.type === "embed") {
     return (
@@ -655,7 +795,13 @@ function MediaView({ item, title, className = "" }) {
 
 /* ---------------- 作品灯箱 ---------------- */
 
-function Lightbox({ images, index, title, onClose, onIndex }) {
+/**
+ * 作品大图。除了翻图，还带这一位的署名、分类和这段作品自己的说明 ——
+ * 客户经常是放大看完才决定要不要往下读。手机上可以直接左右滑。
+ */
+function Lightbox({ images, index, title, sub, desc, onClose, onIndex }) {
+  const touch = useRef(null);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
@@ -676,13 +822,36 @@ function Lightbox({ images, index, title, onClose, onIndex }) {
   const many = images.length > 1;
   const stop = (e) => e.stopPropagation();
 
+  // 左右滑翻页：碰到按钮/链接就不算滑动，免得把「按住按钮」误判成翻页
+  const onTouchStart = (e) => {
+    if (e.target.closest("button,a")) { touch.current = null; return; }
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e) => {
+    const s = touch.current;
+    touch.current = null;
+    if (!s || !many) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.8) onIndex(i + (dx < 0 ? 1 : -1));
+  };
+
   return (
-    <div className="lb" role="dialog" aria-modal="true" aria-label="作品大图" onClick={onClose}>
+    <div
+      className="lb"
+      role="dialog"
+      aria-modal="true"
+      aria-label="作品大图"
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <div className="lb-bar is-top" onClick={stop}>
         <div>
           <div className="lb-title">{title}</div>
           <div className="lb-count">
-            {String(i + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
+            {sub ? `${sub} · ` : ""}{String(i + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
           </div>
         </div>
         <button className="lb-btn" onClick={onClose} aria-label="关闭"><IcClose /></button>
@@ -711,11 +880,10 @@ function Lightbox({ images, index, title, onClose, onIndex }) {
 
       <img className="lb-img" src={images[i]} alt={`${title} - ${i + 1}`} onClick={stop} />
 
-      {many && (
-        <div className="lb-bar is-bottom" onClick={stop}>
-          <span className="lb-count">← → 切换 · ESC 关闭</span>
-        </div>
-      )}
+      <div className="lb-bar is-bottom" onClick={stop}>
+        {desc ? <span className="lb-desc">{desc}</span> : <span />}
+        <span className="lb-count">{many ? "← → 或左右滑动切换 · ESC 关闭" : "ESC 关闭"}</span>
+      </div>
     </div>
   );
 }
@@ -888,6 +1056,10 @@ function WorksGrid({ works, showFilter = true, limit }) {
                     style={{ objectPosition: w.imagePos || "50% 50%" }}
                   />
                   <span className="card-chip">{w.category}</span>
+                  {/* 有视频就把体积写在封面上，客户知道点开要下多大一份东西 */}
+                  {videoOf(w) && (
+                    <span className="card-play">▶ {videoOf(w).size || "视频"}</span>
+                  )}
                   <span className="card-go">
                     View
                     <IcArrow s={11} />
@@ -1071,7 +1243,7 @@ function Contact() {
   const copyWechat = async () => {
     const v = PROFILE.wechat;
     try { await navigator.clipboard.writeText(v); }
-    catch (e) {
+    catch {
       const t = document.createElement("textarea");
       t.value = v; document.body.appendChild(t); t.select();
       document.execCommand("copy"); t.remove();
@@ -1151,6 +1323,10 @@ function Contact() {
 export function Home() {
   const PROFILE = usePerson();
   const works = useWorks(PROFILE);
+  usePageMeta(
+    `${PROFILE.name} · ${PROFILE.roleSub} | 3D 产品渲染作品集`,
+    `${PROFILE.name}——${PROFILE.statement}`
+  );
   return (
     <>
       <Nav />
@@ -1184,6 +1360,10 @@ export function Home() {
  * 这里只负责把两位摆出来，让人一次点进去。
  */
 export function Gate() {
+  usePageMeta(
+    "谢曙浩 · 谢俊勇 · 3D 产品渲染作品集 | 产品可视化与商业渲染",
+    "两个人的 3D 产品渲染作品集：谢曙浩主攻美妆日化产品可视化，谢俊勇主攻 Cinema 4D + Octane 产品渲染与分通道合成。"
+  );
   return (
     <>
       <PersonCtx.Provider value={HAO}>
@@ -1215,16 +1395,17 @@ export function Gate() {
   );
 }
 
-/** 门页上的一个人一张卡：封面取他作品里的第一件 */
+/** 门页上的一张卡：主封面 + 三张小图，不点进去也能先多看几件 */
 function GateCard({ person }) {
-  const works = useWorks(person);
-  const cover = works && works.length ? coverOf(works[0]) : null;
-  const first = works && works.length ? works[0] : null;
+  const works = useStaticWorks(person);
+  const list = works || [];
+  const [lead, ...rest] = list;
+  const thumbs = rest.slice(0, 3);
   return (
     <PersonCtx.Provider value={person}>
       <Link className="gate" to={person.path}>
         <div className="gate-media">
-          {cover ? <img src={cover} alt={first.title} loading="lazy" /> : <span className="gate-ph" />}
+          {lead ? <img src={coverOf(lead)} alt={lead.title} loading="lazy" /> : <span className="gate-ph" />}
           <span className="gate-badge">{person.badge}</span>
         </div>
         <div className="gate-body">
@@ -1233,6 +1414,14 @@ function GateCard({ person }) {
           <p className="body-sm prose" style={{ marginTop: 10 }}>
             {works ? `${works.length} 件作品 · ${person.line || person.roleSub}` : "正在载入…"}
           </p>
+          <div className="gate-thumbs">
+            {thumbs.map((w) => (
+              <span className="gate-thumb" key={w.slug || w.id}>
+                <img src={coverOf(w)} alt="" loading="lazy" style={{ objectPosition: w.imagePos || "50% 50%" }} />
+              </span>
+            ))}
+            {thumbs.length === 0 && !works && [0, 1, 2].map((k) => <span className="gate-thumb is-empty" key={k} />)}
+          </div>
           <span className="gate-go">进入作品</span>
         </div>
       </Link>
@@ -1282,6 +1471,10 @@ export function WorkDetail() {
   const [zoom, setZoom] = useState(null);   // 灯箱打开时存的是图片下标
 
   const work = (works || []).find((w) => w.slug === slug);
+  usePageMeta(
+    work ? `${work.detail?.title || work.title} · ${PROFILE.name}` : null,
+    work?.detail?.description
+  );
   // 统一的媒体列表（图片 / 视频 / 外链）；老数据只有 images 会自动推导
   const media = useMemo(() => (work ? mediaOf(work) : []), [work]);
   // 灯箱只翻图片，视频和外链用页面上的原生播放器
@@ -1291,10 +1484,27 @@ export function WorkDetail() {
   );
   const [mi, setMi] = useState(0);   // 当前媒体下标
 
+  // 第几个媒体写进地址（?m=3）：把链接发给客户，能落回同一张画面
   useEffect(() => {
-    setMi(0);
+    const q = new URLSearchParams(window.location.search);
+    const n = Number(q.get("m"));
+    setMi(Number.isInteger(n) && n > 0 ? n - 1 : 0);
     setZoom(null);
-  }, [slug]);
+  }, [slug, media.length]);
+
+  // 首次不写：否则会把刚读到的 ?m 擦掉，深链当场失效
+  const wroteOnce = useRef(false);
+  useEffect(() => {
+    if (!wroteOnce.current) { wroteOnce.current = true; return; }
+    const q = new URLSearchParams(window.location.search);
+    if (mi === 0) q.delete("m");
+    else q.set("m", String(mi + 1));
+    const qs = q.toString();
+    window.history.replaceState(
+      null, "",
+      window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash
+    );
+  }, [mi]);
 
   const current = media[Math.min(mi, Math.max(0, media.length - 1))];
   const isImage = current?.type === "image";
@@ -1350,6 +1560,8 @@ export function WorkDetail() {
           images={images}
           index={zoom}
           title={detail.title || work.title}
+          sub={`${PROFILE.name} · ${work.category}`}
+          desc={detail.description}
           onClose={() => setZoom(null)}
           onIndex={setZoom}
         />
@@ -1382,9 +1594,7 @@ export function WorkDetail() {
               </button>
             )}
             {current?.type === "video" && (
-              <div className="stage stage-video">
-                <MediaView item={current} title={detail.title || work.title} className="stage-media" />
-              </div>
+              <MediaView item={current} title={detail.title || work.title} className="stage-media" />
             )}
             {current?.type === "embed" && (
               <MediaView item={current} title={detail.title || work.title} />

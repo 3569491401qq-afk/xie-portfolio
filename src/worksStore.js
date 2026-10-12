@@ -17,13 +17,45 @@
 const DB_NAME = "xie-portfolio";
 const DB_VERSION = 1;
 const STORE_NAME = "kv";
-const DRAFT_KEY = "works-draft";
-const LS_DRAFT_KEY = "xie-portfolio:works-draft";
-const LS_PUBLISHED_HASH = "xie-portfolio:published-hash";
 const LS_GH_CONFIG = "xie-portfolio:gh-config";
 
-/** 线上数据的地址（构建时被拷进 dist 根目录） */
-const PUBLISHED_URL = "/works.json";
+/* ---------- 两位作者，各一份数据 ----------
+   草稿、线上文件、发布目标全部按人分开；切人时把内存缓存清掉重新读。
+   谢曙浩沿用老的存储键名，他这台电脑上已有的草稿不会丢。 */
+const PERSONS = {
+  hao: {
+    draftKey: "works-draft",
+    lsDraft: "xie-portfolio:works-draft",
+    lsHash: "xie-portfolio:published-hash",
+    url: "/works.json",
+    repoFile: "public/works.json",
+  },
+  yong: {
+    draftKey: "works-draft-yong",
+    lsDraft: "xie-portfolio:works-draft-yong",
+    lsHash: "xie-portfolio:published-hash-yong",
+    url: "/works-yong.json",
+    repoFile: "public/works-yong.json",
+  },
+};
+
+let activePerson = "hao";
+
+/** 切到哪位作者。换人后必须重新 loadWorks。 */
+export function setActivePerson(key) {
+  const next = PERSONS[key] ? key : "hao";
+  if (next === activePerson) return activePerson;
+  activePerson = next;
+  draftCache = null;
+  publishedCache = null;
+  return activePerson;
+}
+
+export function getActivePerson() {
+  return activePerson;
+}
+
+const PC = () => PERSONS[activePerson];
 
 /** 内存缓存 */
 let draftCache = null;
@@ -77,7 +109,7 @@ async function idbRead() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
-    const req = tx.objectStore(STORE_NAME).get(DRAFT_KEY);
+    const req = tx.objectStore(STORE_NAME).get(PC().draftKey);
     req.onsuccess = () => resolve(req.result ?? null);
     req.onerror = () => reject(req.error);
   });
@@ -87,7 +119,7 @@ async function idbWrite(value) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(value, DRAFT_KEY);
+    tx.objectStore(STORE_NAME).put(value, PC().draftKey);
     tx.oncomplete = () => resolve(true);
     tx.onerror = () => reject(tx.error);
   });
@@ -129,11 +161,12 @@ function hashStr(s) {
 
 /** 线上数据：优先用构建时注入的全局变量（离线单文件预览），否则 fetch */
 async function fetchPublished() {
-  if (typeof window !== "undefined" && Array.isArray(window.__WORKS_JSON__)) {
+  // 注入的全局变量只有谢曙浩那一份，另一位的必须走 fetch
+  if (activePerson === "hao" && typeof window !== "undefined" && Array.isArray(window.__WORKS_JSON__)) {
     return clone(window.__WORKS_JSON__);
   }
   try {
-    const res = await fetch(PUBLISHED_URL, { cache: "no-cache" });
+    const res = await fetch(PC().url, { cache: "no-cache" });
     if (!res.ok) return null;
     const data = await res.json();
     return Array.isArray(data) && data.length ? data : null;
@@ -161,7 +194,7 @@ export async function loadWorks(fallback) {
     }
   }
   if (!Array.isArray(draft) || draft.length === 0) {
-    const local = lsGet(LS_DRAFT_KEY);
+    const local = lsGet(PC().lsDraft);
     if (Array.isArray(local) && local.length) draft = local;
   }
 
@@ -196,7 +229,7 @@ export async function saveWorks(works) {
     }
   }
 
-  const ok = lsSet(LS_DRAFT_KEY, next);
+  const ok = lsSet(PC().lsDraft, next);
   return ok
     ? { ok: true, backend: "localstorage" }
     : { ok: false, backend: "none", error: new Error("本地存储写入被拒绝（多半是配额满了）") };
@@ -229,11 +262,11 @@ export async function pullFromRemote(fallback) {
 /* ---------- 「未发布改动」判断 ---------- */
 
 export function getPublishedHash() {
-  return lsGet(LS_PUBLISHED_HASH) || null;
+  return lsGet(PC().lsHash) || null;
 }
 
 function setPublishedHash(h) {
-  lsSet(LS_PUBLISHED_HASH, h);
+  lsSet(PC().lsHash, h);
 }
 
 /** 当前草稿是否和已发布的版本不一致 */
@@ -424,8 +457,8 @@ export async function publishWorks(works, cfg, onProgress = () => {}) {
   }
 
   // 3. 写数据文件
-  onProgress("写入 works.json…");
-  await putFile("public/works.json", toBase64(JSON.stringify(next, null, 2)), "更新作品数据");
+  onProgress(`写入 ${PC().repoFile}…`);
+  await putFile(PC().repoFile, toBase64(JSON.stringify(next, null, 2)), "更新作品数据");
 
   // 4. 本地草稿同步成刚发布的版本（图片路径已换成线上路径，本地占用也小了）
   await saveWorks(next);

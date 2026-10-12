@@ -28,6 +28,8 @@ import {
   readAsDataUrl,
   makeVideoPoster,
   toEmbedUrl,
+  setActivePerson,
+  getActivePerson,
 } from "./worksStore.js";
 // 工作室版视觉（原本只在 preview.html 里）。现在直接作为主站的公开页面，
 // 作者中心 / 登录仍用下面 Tailwind 的老组件。
@@ -487,13 +489,19 @@ function deriveCategories(works) {
 // 数据存在浏览器本地（IndexedDB），所以作者中心的改动刷新后还在，
 // 而且前台页面会立刻跟着变。访客看不到这些改动（静态站的固有限制），
 // 要真正发布需要在作者中心「导出数据」后写回代码。
-function useWorks() {
-  const [works, setWorks] = useState(() => getCachedWorks() || ALL_WORKS);
+function useWorks(personKey) {
+  // 不传 personKey 就沿用当前激活的那位（作者中心切人后，编辑页跟着走）
+  const seed = () => (getActivePerson() === "hao" ? ALL_WORKS : []);
+  const [works, setWorks] = useState(() => getCachedWorks() || seed());
   const [ready, setReady] = useState(() => Boolean(getCachedWorks()));
 
   useEffect(() => {
     let alive = true;
-    loadWorks(ALL_WORKS)
+    if (personKey) setActivePerson(personKey);
+    const fallback = seed();
+    setWorks(getCachedWorks() || fallback);
+    setReady(Boolean(getCachedWorks()));
+    loadWorks(fallback)
       .then((w) => {
         if (!alive) return;
         setWorks(w);
@@ -510,7 +518,7 @@ function useWorks() {
       alive = false;
       unsubscribe();
     };
-  }, []);
+  }, [personKey]);
 
   const persist = useCallback(async (next) => {
     setWorks(next);            // 先让界面立刻响应
@@ -703,7 +711,11 @@ function AdminPage() {
   const navigate = useNavigate();
   useAuthorGuard();
 
-  const { works, ready, persist } = useWorks();
+  // 管哪一位的作品：草稿、线上文件、发布目标都跟着切
+  const [personKey, setPersonKey] = useState(() => getActivePerson());
+  const personName = personKey === "yong" ? "谢俊勇" : "谢曙浩";
+  const personFile = personKey === "yong" ? "works-yong.json" : "works.json";
+  const { works, ready, persist } = useWorks(personKey);
   const [showAddForm, setShowAddForm] = useState(false);
   const [status, setStatus] = useState("");
   const [statusKind, setStatusKind] = useState("info");
@@ -748,14 +760,14 @@ function AdminPage() {
       notify("还没填 GitHub Token。点右上角「仓库」按钮填一下再发布。", "error");
       return;
     }
-    if (!window.confirm(`把当前 ${works.length} 个作品发布到 ${ghConfig.owner}/${ghConfig.repo}？\n\n提交后 Vercel 会自动重新构建，大约 1 分钟后全网生效。`)) {
+    if (!window.confirm(`把「${personName}」当前的 ${works.length} 个作品发布到 ${ghConfig.owner}/${ghConfig.repo}？\n\n写入的是 ${personFile}，另一位的文件不会被动。\n提交后 Vercel 会自动重新构建，大约 1 分钟后全网生效。`)) {
       return;
     }
     try {
       setPublishing("准备中…");
       const res = await publishWorks(works, ghConfig, (msg) => setPublishing(msg));
       setUnpublished(false);
-      notify(`已发布：${res.works} 个作品、${res.images} 张新图。Vercel 构建中，约 1 分钟后生效。`);
+      notify(`已发布「${personName}」：${res.works} 个作品、${res.images} 张新图 → ${personFile}。Vercel 构建中，约 1 分钟后生效。`);
     } catch (e) {
       console.error(e);
       notify(`发布失败 —— ${e.message}`, "error");
@@ -771,8 +783,8 @@ function AdminPage() {
   };
 
   const handlePullRemote = async () => {
-    if (!window.confirm("用线上数据覆盖本地草稿？本地未发布的改动会丢掉。")) return;
-    await pullFromRemote(ALL_WORKS);
+    if (!window.confirm(`用线上数据覆盖「${personName}」的本地草稿？未发布的改动会丢掉。`)) return;
+    await pullFromRemote(personKey === "hao" ? ALL_WORKS : []);
     setUnpublished(false);
     notify("已从线上重新拉取");
   };
@@ -896,8 +908,8 @@ function AdminPage() {
   };
 
   const handleReset = async () => {
-    if (!window.confirm("确定放弃所有本地改动、回到线上那一版吗？")) return;
-    await discardDraft(ALL_WORKS);
+    if (!window.confirm(`确定放弃「${personName}」的所有本地改动、回到线上那一版吗？`)) return;
+    await discardDraft(personKey === "hao" ? ALL_WORKS : []);
     setUnpublished(false);
     notify("已丢弃本地改动");
   };
@@ -917,6 +929,22 @@ function AdminPage() {
             </button>
             <span className="text-secondary text-xs md:text-sm">|</span>
             <span className="text-xs md:text-sm font-medium">作者中心</span>
+            {/* 切到哪一位，就管哪一位的作品与发布 */}
+            <span className="flex items-center gap-1.5">
+              {[["hao", "谢曙浩"], ["yong", "谢俊勇"]].map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => setPersonKey(k)}
+                  className={`px-3 py-1.5 text-xs md:text-sm transition-colors ${
+                    personKey === k
+                      ? "bg-white text-black font-medium"
+                      : "border border-border text-secondary hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
             <button
@@ -1071,10 +1099,14 @@ function AdminPage() {
           {/* 标题行 */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-10">
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold tracking-tighter mb-1 md:mb-2">作品管理</h1>
+              <h1 className="text-2xl md:text-4xl font-bold tracking-tighter mb-1 md:mb-2">作品管理 · {personName}</h1>
               <p className="text-secondary text-sm">
                 共 {works.length} 个作品
                 <span className="text-secondary/60"> · 点任意作品进入它的编辑页</span>
+                <span className="text-secondary/60"> · 发布写入 {personFile}</span>{" "}
+                <Link to={personKey === "yong" ? "/yong" : "/hao"} className="underline hover:text-white">
+                  看这一位的页面
+                </Link>
               </p>
             </div>
             <button

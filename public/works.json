@@ -236,7 +236,8 @@
         {
           "type": "video",
           "src": "/works/sakura-spring-orbit.mp4",
-          "poster": "/works/sakura-spring-orbit.jpg"
+          "poster": "/works/sakura-spring-orbit.jpg",
+          "size": "5.4 MB"
         },
         {
           "type": "image",
@@ -257,7 +258,8 @@
         {
           "type": "video",
           "src": "/works/sakura-rain-orbit.mp4",
-          "poster": "/works/sakura-rain-orbit.jpg"
+          "poster": "/works/sakura-rain-orbit.jpg",
+          "size": "4.1 MB"
         },
         {
           "type": "image",
