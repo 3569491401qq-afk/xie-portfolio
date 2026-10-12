@@ -35,6 +35,8 @@ import {
   Home as StudioHome,
   WorkDetail as StudioWorkDetail,
   WorkListPage as StudioWorkList,
+  Gate as StudioGate,
+  WithPerson,
 } from "./preview/StudioPreview.jsx";
 import "./preview/preview.css";
 
@@ -2727,12 +2729,17 @@ function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-background selection:bg-white/20">
         <Routes>
-          {/* 公开页面 = 工作室版视觉 */}
-          <Route path="/" element={<StudioHome />} />
-          <Route path="/portfolio" element={<StudioWorkList />} />
-          <Route path="/works" element={<StudioWorkList />} />
-          <Route path="/work/:slug" element={<StudioWorkDetail />} />
-          <Route path="/portfolio/:slug" element={<StudioWorkDetail />} />
+          {/* 公开页面 = 工作室版视觉。首页先选找谁，两位各一条独立路径 */}
+          <Route path="/" element={<StudioGate />} />
+          <Route path="/hao" element={<WithPerson person="hao"><StudioHome /></WithPerson>} />
+          <Route path="/hao/work/:slug" element={<WithPerson person="hao"><StudioWorkDetail /></WithPerson>} />
+          <Route path="/yong" element={<WithPerson person="yong"><StudioHome /></WithPerson>} />
+          <Route path="/yong/work/:slug" element={<WithPerson person="yong"><StudioWorkDetail /></WithPerson>} />
+          {/* 老地址继续指向谢曙浩那份，之前分享出去的链接不失效 */}
+          <Route path="/portfolio" element={<WithPerson person="hao"><StudioWorkList /></WithPerson>} />
+          <Route path="/works" element={<WithPerson person="hao"><StudioWorkList /></WithPerson>} />
+          <Route path="/work/:slug" element={<WithPerson person="hao"><StudioWorkDetail /></WithPerson>} />
+          <Route path="/portfolio/:slug" element={<WithPerson person="hao"><StudioWorkDetail /></WithPerson>} />
           {/* 作者中心 / 登录：仍是原来的 Tailwind 组件 */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin" element={<AdminPage />} />

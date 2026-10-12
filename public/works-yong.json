@@ -1,0 +1,274 @@
+[
+  {
+    "id": 100,
+    "title": "散粉 · 粉调氛围短片",
+    "category": "美妆 · 动画",
+    "image": "/works/jy-1.jpg",
+    "ar": "16/9",
+    "desc": "以粉色大理石台座与拱门走廊为主场景的多镜头产品短片，练习大面积柔光下的粉体质感、…",
+    "slug": "jy-pressed-powder",
+    "detail": {
+      "title": "散粉 · 粉调氛围短片",
+      "category": "Cinema 4D + Octane Render",
+      "description": "以粉色大理石台座与拱门走廊为主场景的多镜头产品短片，练习大面积柔光下的粉体质感、镜面反射与浅景深控制。",
+      "tags": [
+        "Octane Render",
+        "粉体质感",
+        "柔光布光",
+        "多镜头"
+      ],
+      "images": [
+        "/works/jy-1.jpg"
+      ],
+      "media": [
+        {
+          "type": "video",
+          "src": "/works/jy-1.mp4",
+          "poster": "/works/jy-1.jpg"
+        },
+        {
+          "type": "image",
+          "src": "/works/jy-1.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 101,
+    "title": "早餐工厂 · 玩具场景",
+    "category": "静物 · 动画",
+    "image": "/works/jy-2.jpg",
+    "ar": "4/5",
+    "desc": "玩具化早餐传送带场景的动态演示：软管件输送、煎蛋与盘子流转，练习塑料材质的高饱和…",
+    "slug": "jy-breakfast-factory",
+    "detail": {
+      "title": "早餐工厂 · 玩具场景",
+      "category": "Cinema 4D + Octane Render",
+      "description": "玩具化早餐传送带场景的动态演示：软管件输送、煎蛋与盘子流转，练习塑料材质的高饱和配色、圆形软管件结构建模与明亮卡通氛围的光比控制。",
+      "tags": [
+        "场景搭建",
+        "塑料材质",
+        "卡通渲染",
+        "动画",
+        "C4D"
+      ],
+      "images": [
+        "/works/jy-2.jpg"
+      ],
+      "media": [
+        {
+          "type": "video",
+          "src": "/works/jy-2.mp4",
+          "poster": "/works/jy-2.jpg"
+        },
+        {
+          "type": "image",
+          "src": "/works/jy-2.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 102,
+    "title": "多通道护肤水 · 光影版",
+    "category": "美妆 · 产品",
+    "image": "/works/jy-3.jpg",
+    "ar": "2/3",
+    "desc": "方形磨砂玻璃瓶身置于暖调墙面，斜射阳光经格栅形成硬边光影，重点练习半透明玻璃的透…",
+    "slug": "jy-multi-channel-essence",
+    "detail": {
+      "title": "多通道护肤水 · 光影版",
+      "category": "Cinema 4D + Octane Render",
+      "description": "方形磨砂玻璃瓶身置于暖调墙面，斜射阳光经格栅形成硬边光影，重点练习半透明玻璃的透光衰减与焦散。",
+      "tags": [
+        "玻璃材质",
+        "焦散",
+        "硬光",
+        "暖调布光"
+      ],
+      "images": [
+        "/works/jy-3.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-3.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 103,
+    "title": "双萃精华 · 红棕瓶身",
+    "category": "美妆 · 产品",
+    "image": "/works/jy-4.jpg",
+    "ar": "2/3",
+    "desc": "金属压泵头搭配红棕色透明瓶身，白底加彩色反射卡的经典电商布光方案，练习有色液体的…",
+    "slug": "jy-double-serum",
+    "detail": {
+      "title": "双萃精华 · 红棕瓶身",
+      "category": "Cinema 4D + Octane Render",
+      "description": "金属压泵头搭配红棕色透明瓶身，白底加彩色反射卡的经典电商布光方案，练习有色液体的通透感与金属拉丝反射。",
+      "tags": [
+        "有色液体",
+        "金属压泵",
+        "白底布光",
+        "电商主图"
+      ],
+      "images": [
+        "/works/jy-4.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-4.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 104,
+    "title": "绿色香水 · 磨砂展台",
+    "category": "美妆 · 产品",
+    "image": "/works/jy-5.jpg",
+    "ar": "9/16",
+    "desc": "竖纹玻璃香水瓶立于黑色磨砂展台，绿色背光自后方穿透瓶体形成内发光，练习刻度玻璃的…",
+    "slug": "jy-green-perfume",
+    "detail": {
+      "title": "绿色香水 · 磨砂展台",
+      "category": "Cinema 4D + Octane Render",
+      "description": "竖纹玻璃香水瓶立于黑色磨砂展台，绿色背光自后方穿透瓶体形成内发光，练习刻度玻璃的折射条纹与轮廓光控制。",
+      "tags": [
+        "刻度玻璃",
+        "内发光",
+        "轮廓光",
+        "深色布光"
+      ],
+      "images": [
+        "/works/jy-5.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-5.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 105,
+    "title": "运动相机 · 展台聚光",
+    "category": "消费电子 · 产品",
+    "image": "/works/jy-6.jpg",
+    "ar": "4/5",
+    "desc": "黑灰机身置于水泥质感圆台，顶部环形柔光罩压出硬边高光，练习哑光塑料与粗糙水泥的质…",
+    "slug": "jy-action-camera",
+    "detail": {
+      "title": "运动相机 · 展台聚光",
+      "category": "Cinema 4D + Octane Render",
+      "description": "黑灰机身置于水泥质感圆台，顶部环形柔光罩压出硬边高光，练习哑光塑料与粗糙水泥的质感对比及水面倒影。",
+      "tags": [
+        "哑光塑料",
+        "粗糙水泥",
+        "环形光",
+        "倒影"
+      ],
+      "images": [
+        "/works/jy-6.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-6.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 106,
+    "title": "粉底液 · 亚克力方瓶",
+    "category": "美妆 · 产品",
+    "image": "/works/jy-7.jpg",
+    "ar": "2/3",
+    "desc": "三支亚克力方瓶错落叠放于暖棕台面，练习透明树脂的边缘折射、内部结构透光与同色系背…",
+    "slug": "jy-foundation",
+    "detail": {
+      "title": "粉底液 · 亚克力方瓶",
+      "category": "Cinema 4D + Octane Render",
+      "description": "三支亚克力方瓶错落叠放于暖棕台面，练习透明树脂的边缘折射、内部结构透光与同色系背景下的层次分离。",
+      "tags": [
+        "亚克力",
+        "透明折射",
+        "同色系布光",
+        "构图"
+      ],
+      "images": [
+        "/works/jy-7.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-7.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 107,
+    "title": "游戏手柄 · 悬浮展示",
+    "category": "消费电子 · 产品",
+    "image": "/works/jy-8.jpg",
+    "ar": "4/5",
+    "desc": "两只手柄悬浮于纯色渐变背景，练习曲面塑料的高光走势、按键细节还原与接地阴影的软硬…",
+    "slug": "jy-game-controller",
+    "detail": {
+      "title": "游戏手柄 · 悬浮展示",
+      "category": "Cinema 4D + Octane Render",
+      "description": "两只手柄悬浮于纯色渐变背景，练习曲面塑料的高光走势、按键细节还原与接地阴影的软硬控制。",
+      "tags": [
+        "曲面建模",
+        "按键细节",
+        "悬浮构图",
+        "接地阴影"
+      ],
+      "images": [
+        "/works/jy-8.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-8.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 108,
+    "title": "头戴耳机 · 皮革质感",
+    "category": "消费电子 · 产品",
+    "image": "/works/jy-9.jpg",
+    "ar": "4/5",
+    "desc": "米白耳机斜置于皮革台面，柔和顶光加底部反射卡，练习皮革纹理的次表面感与大面积柔光…",
+    "slug": "jy-headphones",
+    "detail": {
+      "title": "头戴耳机 · 皮革质感",
+      "category": "Cinema 4D + Octane Render",
+      "description": "米白耳机斜置于皮革台面，柔和顶光加底部反射卡，练习皮革纹理的次表面感与大面积柔光的渐变过渡。",
+      "tags": [
+        "皮革纹理",
+        "SSS",
+        "柔光渐变",
+        "写实材质"
+      ],
+      "images": [
+        "/works/jy-9.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/jy-9.jpg"
+        }
+      ]
+    }
+  }
+]

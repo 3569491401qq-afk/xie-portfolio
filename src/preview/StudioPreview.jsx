@@ -7,16 +7,22 @@
  *   - 样式全部在 preview.css 里，不复用主站的 Tailwind 类
  * 目的：让作者在不动主站的前提下，对比新视觉再决定要不要换。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
 import { mediaOf, coverOf, loadWorks, getCachedWorks, subscribe } from "../worksStore.js";
 
-/* ---------------- 资料（与主站 PROFILE 保持一致） ---------------- */
+/* ---------------- 两位作者的资料 ----------------
+   站点是同一套设计，「人」作为数据维度：
+   路由 /hao 与 /yong 各自渲染一份作品集，组件通过 usePerson() 拿当前这位。 */
 
-const PROFILE = {
+const HAO = {
+  key: "hao",
+  path: "/hao",
+  dataFile: null,            // null = 走 worksStore（作者中心可编辑、能发布）
   name: "谢曙浩",
   mark: "谢",
+  badge: "浩",
   role: "3D Artist",
   roleSub: "产品可视化 · 商业渲染",
   statement:
@@ -24,6 +30,7 @@ const PROFILE = {
   tagline: "光影重构现实 · 极致视觉表达",
   email: "3569491401@qq.com",
   phone: "193 8854 5612",
+  phoneRaw: "19388545612",
   wechat: "xshxsh5218",
   city: "中国",
   // 口径与事实一致：2025 年起自学，自由职业接单，累计十余单
@@ -32,14 +39,54 @@ const PROFILE = {
     { value: "十余单", label: "项目交付" },
     { value: "6", label: "精通软件" },
   ],
-  // 「关于我」旁边的事实清单，一眼能看完的关键信息
   facts: [
     { k: "入行", v: "2025 年 · 自学" },
     { k: "接单方式", v: "自由职业" },
     { k: "客户来源", v: "设计公司" },
     { k: "擅长品类", v: "美妆日化" },
   ],
+  line: "美妆日化为主，含整套电商交付与环绕动画",
+  notice: "",
 };
+
+const YONG = {
+  key: "yong",
+  path: "/yong",
+  dataFile: "/works-yong.json",   // 静态数据，暂不进作者中心
+  name: "谢俊勇",
+  mark: "谢",
+  badge: "勇",
+  role: "3D Artist",
+  roleSub: "产品渲染 · 视觉合成",
+  statement:
+    "以 Cinema 4D 建模 + Octane Render 离线渲染为核心，配合 Photoshop 做分通道合成，交付可直接用于电商与广告的画面。主攻玻璃、液体、金属这类高反射材质。",
+  tagline: "产品级渲染 · 分通道合成",
+  email: "",
+  phone: "189 7390 0548",
+  phoneRaw: "18973900548",
+  wechat: "hh2670815023",
+  city: "中国",
+  stats: [
+    { value: "9", label: "件作品" },
+    { value: "2", label: "段动画" },
+    { value: "3", label: "个品类" },
+  ],
+  facts: [
+    { k: "主工具", v: "Cinema 4D" },
+    { k: "渲染器", v: "Octane Render" },
+    { k: "后期", v: "Photoshop 分层" },
+    { k: "品类", v: "美妆 · 消费电子" },
+  ],
+  // 他原本的单文件站每张卡都写了临摹声明，合站后这条必须保留
+  line: "美妆与消费电子，含两段产品动画",
+  notice: "本栏目作品为临摹练习，用于建模、材质与灯光构图的练习展示，非商业原创项目。",
+};
+
+export const PEOPLE = { hao: HAO, yong: YONG };
+export const PERSONS = [HAO, YONG];
+
+const PersonCtx = createContext(HAO);
+const usePerson = () => useContext(PersonCtx);
 
 const CAPABILITIES = [
   { n: "01", t: "产品可视化", d: "按商业摄影的思路构建产品静物，让渲染图能直接用于电商主图与详情页。" },
@@ -150,6 +197,11 @@ const HERO = [
   { src: "/works/blue-perfume-01.jpg", pos: "50% 30%", t: "蓝色香氛瓶 · 水波光影", s: "美妆个护" },
   { src: "/works/prop-weapon.jpg", pos: "50% 50%", t: "枪械道具 · 电影感布光", s: "硬表面与场景" },
 ];
+
+/* 精选项目和首屏轮播是「人工挑过、裁切焦点调过」的内容，目前只有谢曙浩这一份。
+   俊勇那边不设精选，进页直接看作品网格；首屏画面由作品数据自动取前三件。 */
+HAO.hero = HERO;
+HAO.featured = PROJECTS;
 
 /* ---------------- 图标（内联，不引图标库） ---------------- */
 
@@ -298,11 +350,26 @@ function Reveal({ children, delay = 0, className = "" }) {
  * worksStore 内部已经处理了离线单文件场景（window.__WORKS_JSON__），
  * 所以这里不用再单独判断。
  */
-function useWorks() {
-  const [works, setWorks] = useState(() => getCachedWorks() || null);
+function useWorks(person) {
+  const [works, setWorks] = useState(() =>
+    person.dataFile ? null : getCachedWorks() || null
+  );
 
   useEffect(() => {
     let alive = true;
+
+    // 俊勇那份是静态 JSON，没有草稿、也不需要作者中心
+    if (person.dataFile) {
+      fetch(person.dataFile)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((w) => alive && setWorks(Array.isArray(w) ? w : []))
+        .catch((e) => {
+          console.warn("作品数据载入失败：", person.dataFile, e);
+          if (alive) setWorks([]);
+        });
+      return () => { alive = false; };
+    }
+
     // 没有草稿时传空数组兜底：worksStore 会优先用草稿/线上数据，
     // 都拿不到才回退到这个空数组，不会让页面卡在「正在载入」。
     loadWorks([])
@@ -320,7 +387,7 @@ function useWorks() {
       alive = false;
       unsubscribe();
     };
-  }, []);
+  }, [person.key, person.dataFile]);
 
   return works;
 }
@@ -345,18 +412,41 @@ function scrollToId(id) {
 /** 导航用：当前页找不到该板块（比如在详情页），先回首页再滚过去 */
 function useGoToSection() {
   const navigate = useNavigate();
+  const person = usePerson();
   return (id) => {
     if (scrollToId(id)) return;
-    navigate("/");
+    // 板块不在当前页（比如在对方的作品集里），先回到自己这页再滚过去
+    navigate(person.path);
     setTimeout(() => scrollToId(id), 140);
   };
 }
 
 /* ---------------- 顶部导航 ---------------- */
 
+/** 两位作者之间的切换：一个方块字，当前这位高亮 */
+function PersonSwitch() {
+  const p = usePerson();
+  return (
+    <span className="nav-switch" role="group" aria-label="切换作者">
+      {PERSONS.map((x) => (
+        <Link
+          key={x.key}
+          to={x.path}
+          className={`nav-switch-item${x.key === p.key ? " is-active" : ""}`}
+          aria-label={x.name}
+          title={x.name}
+        >
+          {x.badge}
+        </Link>
+      ))}
+    </span>
+  );
+}
+
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const goTo = useGoToSection();
+  const PROFILE = usePerson();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -377,7 +467,7 @@ function Nav() {
   return (
     <header className={`nav${scrolled ? " is-scrolled" : ""}`}>
       <div className="wrap nav-inner">
-        <Link to="/" className="brand" aria-label="回到首页">
+        <Link to="/" className="brand" aria-label="回到选人的入口">
           <span className="brand-mark" aria-hidden="true">{PROFILE.mark}</span>
           <span className="brand-text">
             <span className="brand-name">{PROFILE.name}</span>
@@ -395,6 +485,7 @@ function Nav() {
               {l.label}
             </button>
           ))}
+          <PersonSwitch />
           {/* 作者中心是主站的路由，这里用整页跳转过去 */}
           <a className="nav-auth" href="/admin">
             <IcGear />
@@ -408,15 +499,30 @@ function Nav() {
 
 /* ---------------- 首屏 ---------------- */
 
-function Hero() {
+function Hero({ works }) {
+  const PROFILE = usePerson();
   const [i, setI] = useState(0);
   const reduce = useReducedMotion();
 
+  // 有排好的轮播就用那份（裁切焦点调过），没有就拿这位的前三件作品顶上
+  const slides = useMemo(
+    () =>
+      PROFILE.hero?.length
+        ? PROFILE.hero
+        : (works || []).slice(0, 3).map((w) => ({
+            src: coverOf(w),
+            pos: w.imagePos || "50% 50%",
+            t: w.title,
+            s: w.category,
+          })),
+    [PROFILE, works]
+  );
+
   useEffect(() => {
-    if (reduce) return;
-    const t = setInterval(() => setI((n) => (n + 1) % HERO.length), 6500);
+    if (reduce || slides.length < 2) return;
+    const t = setInterval(() => setI((n) => (n + 1) % slides.length), 6500);
     return () => clearInterval(t);
-  }, [reduce]);
+  }, [reduce, slides.length]);
 
   return (
     <section className="hero">
@@ -474,7 +580,7 @@ function Hero() {
 
       {/* 右：作品画面，慢速轮播 + 极缓推近 */}
       <div className="hero-stage">
-        {HERO.map((h, k) => (
+        {slides.map((h, k) => (
           <div className={`hero-slide${k === i ? " is-active" : ""}`} key={h.src} aria-hidden={k !== i}>
             <img
               src={h.src}
@@ -493,10 +599,10 @@ function Hero() {
         ))}
         <div className="hero-index">
           <span className="hero-index-num">
-            {String(i + 1).padStart(2, "0")} / {String(HERO.length).padStart(2, "0")}
+            {String(i + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
           </span>
           <span className="hero-index-bars">
-            {HERO.map((h, k) => (
+            {slides.map((h, k) => (
               <button
                 key={h.src}
                 className={`hero-bar${k === i ? " is-active" : ""}`}
@@ -631,7 +737,9 @@ function SecHead({ num, title, note }) {
 /* ---------------- 精选项目 ---------------- */
 
 function Featured() {
-  const [lead, ...rest] = PROJECTS;
+  const PROFILE = usePerson();
+  const [lead, ...rest] = PROFILE.featured || [];
+  if (!lead) return null;
   return (
     <section className="section" id="featured">
       <div className="wrap">
@@ -688,6 +796,7 @@ function Featured() {
 /* ---------------- 作品集（筛选 + 网格） ---------------- */
 
 function WorksGrid({ works, showFilter = true, limit }) {
+  const PROFILE = usePerson();
   const [cat, setCat] = useState("全部");
   const [tag, setTag] = useState(null);
 
@@ -769,7 +878,7 @@ function WorksGrid({ works, showFilter = true, limit }) {
         <div className="grid-works">
           {list.map((w, k) => (
             <Reveal key={w.slug || w.id} delay={Math.min(k * 0.05, 0.25)}>
-              <Link className="card" to={`/work/${w.slug}`}>
+              <Link className="card" to={`${PROFILE.path}/work/${w.slug}`}>
                 <div className="card-media">
                   <img
                     src={coverOf(w)}
@@ -809,6 +918,7 @@ function WorksGrid({ works, showFilter = true, limit }) {
 /* ---------------- 关于 ---------------- */
 
 function About() {
+  const PROFILE = usePerson();
   return (
     <section className="section" id="about">
       <div className="wrap">
@@ -956,6 +1066,19 @@ function Process() {
 /* ---------------- 联系与页脚 ---------------- */
 
 function Contact() {
+  const PROFILE = usePerson();
+  const [copied, setCopied] = useState(false);
+  const copyWechat = async () => {
+    const v = PROFILE.wechat;
+    try { await navigator.clipboard.writeText(v); }
+    catch (e) {
+      const t = document.createElement("textarea");
+      t.value = v; document.body.appendChild(t); t.select();
+      document.execCommand("copy"); t.remove();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
   return (
     <section className="section" id="contact">
       <div className="wrap">
@@ -964,25 +1087,38 @@ function Contact() {
           <Reveal>
             <div>
               <h3 className="h2" style={{ marginBottom: 18 }}>有产品想做成渲染图？</h3>
-              <a className="contact-mail" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+              {PROFILE.email ? (
+                <a className="contact-mail" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+              ) : (
+                <a className="contact-mail" href={`tel:${PROFILE.phoneRaw}`}>{PROFILE.phone}</a>
+              )}
               <p className="body-sm" style={{ marginTop: 16 }}>
-                或加微信 <span style={{ color: "var(--accent)", fontFamily: "var(--mono)" }}>{PROFILE.wechat}</span>
+                或加微信{" "}
+                <button className="copy-wechat" onClick={copyWechat}>
+                  <span style={{ color: "var(--accent)", fontFamily: "var(--mono)" }}>{PROFILE.wechat}</span>
+                  <span className="copy-flag">{copied ? "已复制 ✓" : "点一下复制"}</span>
+                </button>
               </p>
             </div>
           </Reveal>
           <Reveal delay={0.08}>
             <div className="contact-list">
-              <div className="contact-row">
-                <span className="mono">Email</span>
-                <span style={{ color: "var(--ink)" }}>{PROFILE.email}</span>
-              </div>
+              {PROFILE.email && (
+                <div className="contact-row">
+                  <span className="mono">Email</span>
+                  <a href={`mailto:${PROFILE.email}`} style={{ color: "var(--ink)" }}>{PROFILE.email}</a>
+                </div>
+              )}
               <div className="contact-row">
                 <span className="mono">Phone</span>
-                <span style={{ color: "var(--ink)" }}>{PROFILE.phone}</span>
+                {/* 手机上点一下就拨号，电脑上点一下也是拨号软件 */}
+                <a href={`tel:${PROFILE.phoneRaw}`} style={{ color: "var(--ink)" }}>{PROFILE.phone}</a>
               </div>
               <div className="contact-row">
                 <span className="mono">WeChat</span>
-                <span style={{ color: "var(--ink)" }}>{PROFILE.wechat}</span>
+                <button className="linklike" onClick={copyWechat}>
+                  {PROFILE.wechat}{copied ? " · 已复制" : ""}
+                </button>
               </div>
               <div className="contact-row">
                 <span className="mono">Location</span>
@@ -999,7 +1135,7 @@ function Contact() {
         <div className="foot">
           <span className="mono">© {new Date().getFullYear()} {PROFILE.name} · {PROFILE.tagline}</span>
           <span style={{ display: "flex", gap: 18, alignItems: "center" }}>
-            <Link className="mono" to="/works" style={{ letterSpacing: "0.15em" }}>作者中心</Link>
+            <Link className="mono" to="/admin" style={{ letterSpacing: "0.15em" }}>作者中心</Link>
             <button className="mono" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
               回到顶部 ↑
             </button>
@@ -1013,16 +1149,18 @@ function Contact() {
 /* ---------------- 首页 ---------------- */
 
 export function Home() {
-  const works = useWorks();
+  const PROFILE = usePerson();
+  const works = useWorks(PROFILE);
   return (
     <>
       <Nav />
-      <Hero />
+      <Hero works={works} />
       <Featured />
 
       <section className="section" id="works">
         <div className="wrap">
           <SecHead num="02" title="全部作品" note={works ? `${works.length} works` : "loading"} />
+          {PROFILE.notice && <p className="notice">{PROFILE.notice}</p>}
           {works ? (
             <WorksGrid works={works} />
           ) : (
@@ -1039,11 +1177,108 @@ export function Home() {
   );
 }
 
+/* ---------------- 入口：先选找谁 ---------------- */
+
+/**
+ * 站点首页。两个人各一条独立的作品集路径（/hao、/yong），
+ * 这里只负责把两位摆出来，让人一次点进去。
+ */
+export function Gate() {
+  return (
+    <>
+      <PersonCtx.Provider value={HAO}>
+        <NavGate />
+      </PersonCtx.Provider>
+      <section className="section" id="choose" style={{ paddingTop: "clamp(120px,15vh,180px)" }}>
+        <div className="wrap">
+          <SecHead num="00" title="找谁" note="Two artists" />
+          <p className="lede prose" style={{ marginBottom: "clamp(28px,3.4vw,46px)" }}>
+            同一个站点，两条独立的作品集。先看画面，再决定找谁。
+          </p>
+          <div className="gates">
+            {PERSONS.map((p) => (
+              <GateCard key={p.key} person={p} />
+            ))}
+          </div>
+          <p className="body-sm" style={{ marginTop: 34 }}>
+            两人共用一套合作流程与服务范围：产品静物渲染、场景布光、白底主图、详情页套图、纯建模、动画与动态。
+          </p>
+        </div>
+      </section>
+      <div className="wrap">
+        <div className="foot">
+          <span className="mono">© {new Date().getFullYear()} 谢曙浩 · 谢俊勇 · 3D 产品渲染</span>
+          <a className="mono" href="/admin" style={{ letterSpacing: "0.15em" }}>作者中心</a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** 门页上的一个人一张卡：封面取他作品里的第一件 */
+function GateCard({ person }) {
+  const works = useWorks(person);
+  const cover = works && works.length ? coverOf(works[0]) : null;
+  const first = works && works.length ? works[0] : null;
+  return (
+    <PersonCtx.Provider value={person}>
+      <Link className="gate" to={person.path}>
+        <div className="gate-media">
+          {cover ? <img src={cover} alt={first.title} loading="lazy" /> : <span className="gate-ph" />}
+          <span className="gate-badge">{person.badge}</span>
+        </div>
+        <div className="gate-body">
+          <span className="mono mono-accent">{person.roleSub}</span>
+          <h3 className="gate-name">{person.name}</h3>
+          <p className="body-sm prose" style={{ marginTop: 10 }}>
+            {works ? `${works.length} 件作品 · ${person.line || person.roleSub}` : "正在载入…"}
+          </p>
+          <span className="gate-go">进入作品</span>
+        </div>
+      </Link>
+    </PersonCtx.Provider>
+  );
+}
+
+/** 门页的导航：没有板块可滚，只留两位作者和作者中心 */
+function NavGate() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <header className={`nav${scrolled ? " is-scrolled" : ""}`}>
+      <div className="wrap nav-inner">
+        <Link to="/" className="brand" aria-label="回到入口">
+          <span className="brand-mark" aria-hidden="true">谢</span>
+          <span className="brand-text">
+            <span className="brand-name">谢曙浩 · 谢俊勇</span>
+            <span className="brand-role">3D ARTIST DUO · PRODUCT VIZ</span>
+          </span>
+        </Link>
+        <nav className="nav-links" aria-label="主导航">
+          {PERSONS.map((p) => (
+            <Link key={p.key} to={p.path} className="nav-link">{p.name}</Link>
+          ))}
+          <a className="nav-auth" href="/admin">
+            <IcGear />
+            作者中心
+          </a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
 /* ---------------- 作品详情 ---------------- */
 
 export function WorkDetail() {
   const { slug } = useParams();
-  const works = useWorks();
+  const PROFILE = usePerson();
+  const works = useWorks(PROFILE);
   const [zoom, setZoom] = useState(null);   // 灯箱打开时存的是图片下标
 
   const work = (works || []).find((w) => w.slug === slug);
@@ -1121,7 +1356,7 @@ export function WorkDetail() {
       )}
       <div className="detail-hero">
         <div className="wrap">
-          <Link className="alink" to="/" style={{ borderBottom: 0, paddingBottom: 0 }}>
+          <Link className="alink" to={PROFILE.path} style={{ borderBottom: 0, paddingBottom: 0 }}>
             <IcBack />
             返回
           </Link>
@@ -1191,6 +1426,7 @@ export function WorkDetail() {
             <p className="lede prose" style={{ fontSize: "clamp(1rem,1.5vw,1.2rem)" }}>
               {detail.description}
             </p>
+            {PROFILE.notice && <p className="notice">{PROFILE.notice}</p>}
           </Reveal>
 
           {tags.length > 0 && (
@@ -1220,7 +1456,7 @@ export function WorkDetail() {
         <div className="wrap">
           <div className="pager">
             {prev ? (
-              <Link className="pager-item" to={`/work/${prev.slug}`}>
+              <Link className="pager-item" to={`${PROFILE.path}/work/${prev.slug}`}>
                 <span className="pager-k">← 上一件</span>
                 <span className="pager-t">{prev.title}</span>
               </Link>
@@ -1228,7 +1464,7 @@ export function WorkDetail() {
               <span className="pager-item pager-empty" aria-hidden="true" />
             )}
             {next ? (
-              <Link className="pager-item is-next" to={`/work/${next.slug}`}>
+              <Link className="pager-item is-next" to={`${PROFILE.path}/work/${next.slug}`}>
                 <span className="pager-k">下一件 →</span>
                 <span className="pager-t">{next.title}</span>
               </Link>
@@ -1246,7 +1482,7 @@ export function WorkDetail() {
             <div className="grid-works">
               {related.map((w, k) => (
                 <Reveal key={w.id} delay={0.05 * k}>
-                  <Link className="card" to={`/work/${w.slug}`}>
+                  <Link className="card" to={`${PROFILE.path}/work/${w.slug}`}>
                     <div className="card-media">
                       <img src={coverOf(w)} alt={w.title} loading="lazy"
                            style={{ objectPosition: w.imagePos || "50% 50%" }} />
@@ -1265,11 +1501,16 @@ export function WorkDetail() {
       <div className="wrap">
         <div className="foot">
           <span className="mono">© {new Date().getFullYear()} {PROFILE.name}</span>
-          <Link className="mono" to="/" style={{ letterSpacing: "0.15em" }}>回到首页</Link>
+          <Link className="mono" to={PROFILE.path} style={{ letterSpacing: "0.15em" }}>回到作品页</Link>
         </div>
       </div>
     </>
   );
+}
+
+/** 路由用：给一棵子树指定「现在是哪一位」 */
+export function WithPerson({ person, children }) {
+  return <PersonCtx.Provider value={PEOPLE[person] || HAO}>{children}</PersonCtx.Provider>;
 }
 
 /* ---------------- 入口 ---------------- */
@@ -1285,10 +1526,13 @@ export default function StudioPreview() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/work/:slug" element={<WorkDetail />} />
-        <Route path="/works" element={<WorkListPage />} />
-        <Route path="*" element={<WorkDetail />} />
+        <Route path="/" element={<Gate />} />
+        <Route path="/hao" element={<WithPerson person="hao"><Home /></WithPerson>} />
+        <Route path="/hao/work/:slug" element={<WithPerson person="hao"><WorkDetail /></WithPerson>} />
+        <Route path="/yong" element={<WithPerson person="yong"><Home /></WithPerson>} />
+        <Route path="/yong/work/:slug" element={<WithPerson person="yong"><WorkDetail /></WithPerson>} />
+        <Route path="/works" element={<WithPerson person="hao"><WorkListPage /></WithPerson>} />
+        <Route path="*" element={<WithPerson person="hao"><WorkDetail /></WithPerson>} />
       </Routes>
     </HashRouter>
   );
@@ -1296,7 +1540,8 @@ export default function StudioPreview() {
 
 /* 独立的「全部作品」页（导航里作者中心按钮先指到这里，避免死链） */
 export function WorkListPage() {
-  const works = useWorks();
+  const PROFILE = usePerson();
+  const works = useWorks(PROFILE);
   return (
     <>
       <Nav />
