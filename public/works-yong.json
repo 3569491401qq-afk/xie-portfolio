@@ -68,7 +68,8 @@
           "src": "/works/jy-2.jpg"
         }
       ]
-    }
+    },
+    "imagePos": "50% 50%"
   },
   {
     "id": 102,
@@ -103,7 +104,7 @@
     "id": 103,
     "title": "双萃精华 · 红棕瓶身",
     "category": "美妆 · 产品",
-    "image": "/works/jy-4.jpg",
+    "image": "/works/jy-double-serum-01.jpg",
     "ar": "2/3",
     "desc": "有色液体 · 金属压泵 · 白底电商布光",
     "slug": "jy-double-serum",
@@ -118,12 +119,17 @@
         "电商主图"
       ],
       "images": [
-        "/works/jy-4.jpg"
+        "/works/jy-double-serum-01.jpg",
+        "/works/jy-double-serum-02.jpg"
       ],
       "media": [
         {
           "type": "image",
-          "src": "/works/jy-4.jpg"
+          "src": "/works/jy-double-serum-01-img.jpg"
+        },
+        {
+          "type": "image",
+          "src": "/works/jy-double-serum-02-img.jpg"
         }
       ]
     }
@@ -161,7 +167,7 @@
     "id": 105,
     "title": "运动相机 · 展台聚光",
     "category": "消费电子 · 产品",
-    "image": "/works/jy-6.jpg",
+    "image": "/works/jy-action-camera-01.jpg",
     "ar": "4/5",
     "desc": "哑光塑料 · 粗糙水泥 · 环形光倒影",
     "slug": "jy-action-camera",
@@ -176,41 +182,12 @@
         "倒影"
       ],
       "images": [
-        "/works/jy-6.jpg"
+        "/works/jy-action-camera-01.jpg"
       ],
       "media": [
         {
           "type": "image",
-          "src": "/works/jy-6.jpg"
-        }
-      ]
-    }
-  },
-  {
-    "id": 106,
-    "title": "粉底液 · 亚克力方瓶",
-    "category": "美妆 · 产品",
-    "image": "/works/jy-7.jpg",
-    "ar": "2/3",
-    "desc": "亚克力折射 · 内部透光 · 同色系分层",
-    "slug": "jy-foundation",
-    "detail": {
-      "title": "粉底液 · 亚克力方瓶",
-      "category": "Cinema 4D + Octane Render",
-      "description": "三支亚克力方瓶错落叠放于暖棕台面，练习透明树脂的边缘折射、内部结构透光与同色系背景下的层次分离。",
-      "tags": [
-        "亚克力",
-        "透明折射",
-        "同色系布光",
-        "构图"
-      ],
-      "images": [
-        "/works/jy-7.jpg"
-      ],
-      "media": [
-        {
-          "type": "image",
-          "src": "/works/jy-7.jpg"
+          "src": "/works/jy-action-camera-01-img.jpg"
         }
       ]
     }
@@ -248,7 +225,7 @@
     "id": 108,
     "title": "头戴耳机 · 皮革质感",
     "category": "消费电子 · 产品",
-    "image": "/works/jy-9.jpg",
+    "image": "/works/jy-headphones-01.jpg",
     "ar": "4/5",
     "desc": "皮革纹理 · 柔光渐变 · 反射卡补光",
     "slug": "jy-headphones",
@@ -263,14 +240,60 @@
         "写实材质"
       ],
       "images": [
-        "/works/jy-9.jpg"
+        "/works/jy-headphones-01.jpg"
       ],
       "media": [
         {
           "type": "image",
-          "src": "/works/jy-9.jpg"
+          "src": "/works/jy-headphones-01-img.jpg"
         }
       ]
     }
+  },
+  {
+    "title": "粉色粉底液｜C4D+OC电商产品渲染",
+    "category": "",
+    "image": "/works/work-109-01.jpg",
+    "desc": "",
+    "slug": "work-109",
+    "detail": {
+      "title": "粉色粉底液｜C4D+OC电商产品渲染",
+      "category": "",
+      "description": "",
+      "tags": [],
+      "images": [
+        "/works/work-109-01.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/work-109-01-img.jpg"
+        }
+      ]
+    },
+    "id": 109
+  },
+  {
+    "title": "彩妆粉底液商业产品渲染",
+    "category": "",
+    "image": "/works/work-110-01.jpg",
+    "desc": "",
+    "slug": "work-110",
+    "detail": {
+      "title": "彩妆粉底液商业产品渲染",
+      "category": "",
+      "description": "",
+      "tags": [],
+      "images": [
+        "/works/work-110-01.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/work-110-01-img.jpg"
+        }
+      ]
+    },
+    "id": 110
   }
 ]
