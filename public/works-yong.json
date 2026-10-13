@@ -289,5 +289,28 @@
       ]
     },
     "id": 110
+  },
+  {
+    "title": "数码机箱硬件3D商业渲染",
+    "category": "",
+    "image": "/works/work-111-01.jpg",
+    "desc": "",
+    "slug": "work-111",
+    "detail": {
+      "title": "数码机箱硬件3D商业渲染",
+      "category": "",
+      "description": "",
+      "tags": [],
+      "images": [
+        "/works/work-111-01.jpg"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "src": "/works/work-111-01-img.jpg"
+        }
+      ]
+    },
+    "id": 111
   }
 ]
