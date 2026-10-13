@@ -38,7 +38,7 @@
     "id": 101,
     "title": "早餐工厂 · 玩具场景",
     "category": "静物 · 动画",
-    "image": "/works/jy-2.jpg",
+    "image": "/works/jy-breakfast-factory-01-poster.jpg",
     "ar": "4/5",
     "desc": "塑料高饱和 · 传送带构图 · 明亮光比",
     "slug": "jy-breakfast-factory",
@@ -53,19 +53,13 @@
         "动画",
         "C4D"
       ],
-      "images": [
-        "/works/jy-2.jpg"
-      ],
+      "images": [],
       "media": [
         {
           "type": "video",
-          "src": "/works/jy-2.mp4",
-          "poster": "/works/jy-2.jpg",
-          "size": "270 KB"
-        },
-        {
-          "type": "image",
-          "src": "/works/jy-2.jpg"
+          "src": "/works/jy-breakfast-factory-01-v.mp4",
+          "poster": "/works/jy-breakfast-factory-01-poster.jpg",
+          "name": "7月3日(1).mp4"
         }
       ]
     },
