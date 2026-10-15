@@ -116,15 +116,15 @@
   },
   {
     "id": 7,
-    "title": "贝壳薯片产品渲染",
+    "title": "扇贝材质研究",
     "category": "食品饮料",
     "image": "/works/shell-study.jpg",
-    "desc": "卷曲薯片 · 盐粒肌理 · 高饱和撞色",
+    "desc": "薯片 · 色彩对比 · 微观细节",
     "slug": "shell-study",
     "detail": {
-      "title": "贝壳形薯片商业渲染",
+      "title": "薯片贝壳材质研究",
       "category": "Blender + Cycles",
-      "description": "一组以休闲食品为主体的产品渲染。薯片做成贝壳状，卷曲的边缘和螺旋起伏是这张图的核心 —— 要为这种连续曲面还原表面的细微起伏、边缘的锯齿切口，以及附着在起伏上的盐粒与调味粉。用微距构图压到单片上，让形体和肌理同时占满画面；橙黄渐变配高饱和黄底，把「脆」的质感靠反光和色阶层次做出来。",
+      "description": "一次偏材质研究方向的练习。逐层还原扇贝表面的放射状棱纹、生长纹与天然色斑，通过微距构图与高饱和底色强化形体与肌理的视觉张力。",
       "tags": [
         "程序化纹理",
         "微距构图",
@@ -201,82 +201,6 @@
       ],
       "images": [
         "/works/scene-geometry.jpg"
-      ]
-    }
-  },
-  {
-    "id": 12,
-    "title": "樱花街角微缩场景",
-    "category": "硬表面与场景",
-    "image": "/works/sakura-spring-orbit.jpg",
-    "desc": "45 个独立资产 · 日夜双版本 · 含环绕动画",
-    "slug": "sakura-corner",
-    "detail": {
-      "title": "樱花街角微缩场景 · 春日与雨夜",
-      "category": "Blender + Eevee",
-      "description": "一次完整的场景创作：日式车站与便利店街角微缩模型，45 个独立资产、285 个材质、304 个对象级动画。同一套布局做了两版灯光——春日版是晴朗漫射光、干燥路面与花瓣透光；雨夜版是三层雨幕、屋檐滴水、湿地反射与暖冷光对比。开头这段是春日版的环绕镜头，4K 渲染后压成 1080p 交付。",
-      "tags": [
-        "场景搭建",
-        "微缩模型",
-        "程序化纹理",
-        "电影感布光",
-        "环绕动画"
-      ],
-      "images": [
-        "/works/sakura-spring-01.jpg",
-        "/works/sakura-spring-02.jpg",
-        "/works/sakura-spring-03.jpg",
-        "/works/sakura-spring-04.jpg",
-        "/works/sakura-rain-01.jpg",
-        "/works/sakura-rain-02.jpg",
-        "/works/sakura-rain-03.jpg",
-        "/works/sakura-rain-04.jpg"
-      ],
-      "media": [
-        {
-          "type": "video",
-          "src": "/works/sakura-spring-orbit.mp4",
-          "poster": "/works/sakura-spring-orbit.jpg",
-          "size": "5.4 MB"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-spring-01.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-spring-02.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-spring-03.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-spring-04.jpg"
-        },
-        {
-          "type": "video",
-          "src": "/works/sakura-rain-orbit.mp4",
-          "poster": "/works/sakura-rain-orbit.jpg",
-          "size": "4.1 MB"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-rain-01.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-rain-02.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-rain-03.jpg"
-        },
-        {
-          "type": "image",
-          "src": "/works/sakura-rain-04.jpg"
-        }
       ]
     }
   }
